@@ -1,42 +1,44 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { User } from "@/types";
 
 export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const router = useRouter();
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user is logged in and is admin
-    const token = localStorage.getItem("token");
-    const userData = localStorage.getItem("user");
+    const timer = setTimeout(() => {
+      const token = localStorage.getItem("token");
+      const userData = localStorage.getItem("user");
 
-    if (!token || !userData) {
-      router.push("/login");
-      return;
-    }
+      if (!token || !userData) {
+        window.location.href = "/login";
+        return;
+      }
 
-    const parsedUser = JSON.parse(userData);
-    if (parsedUser.role !== "admin") {
-      router.push("/login");
-      return;
-    }
+      const parsedUser: User = JSON.parse(userData);
+      if (parsedUser.role !== "admin") {
+        window.location.href = "/login";
+        return;
+      }
 
-    setUser(parsedUser);
-    setLoading(false);
-  }, [router]);
+      setUser(parsedUser);
+      setLoading(false);
+    }, 0);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
-    router.push("/login");
+    window.location.href = "/login";
   };
 
   if (loading) {

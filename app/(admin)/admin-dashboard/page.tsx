@@ -1,16 +1,31 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { User } from "@/types";
 
 export default function AdminDashboard() {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const userData = localStorage.getItem("user");
-    if (userData) {
-      setUser(JSON.parse(userData));
-    }
+    const timer = setTimeout(() => {
+      const userData = localStorage.getItem("user");
+      if (userData) {
+        setUser(JSON.parse(userData));
+      }
+      setLoading(false);
+    }, 0);
+
+    return () => clearTimeout(timer);
   }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-lg">Loading dashboard...</div>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -37,7 +52,9 @@ export default function AdminDashboard() {
       </div>
 
       <div className="bg-white p-6 rounded-lg shadow">
-        <h2 className="text-xl font-bold mb-4">Welcome, {user?.name}!</h2>
+        <h2 className="text-xl font-bold mb-4">
+          Welcome, {user?.name || "Admin"}!
+        </h2>
         <p className="text-gray-600">
           You are logged in as{" "}
           <span className="font-bold text-blue-600">Administrator</span>. You

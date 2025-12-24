@@ -1,19 +1,26 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { toast } from "sonner"; // Import from sonner
+import Link from "next/link";
 
 export default function LoginPage() {
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError("");
 
     try {
       const response = await fetch("/api/auth", {
@@ -25,112 +32,137 @@ export default function LoginPage() {
       const data = await response.json();
 
       if (data.success) {
-        // Token local storage এ সেভ করবো
         localStorage.setItem("token", data.token);
         localStorage.setItem("user", JSON.stringify(data.user));
 
-        // Role অনুযায়ী redirect করবো
-        if (data.user.role === "admin") {
-          window.location.href = "/admin/dashboard";
-        } else if (data.user.role === "employee") {
-          window.location.href = "/employee/dashboard";
-        } else {
-          window.location.href = "/client/dashboard";
-        }
+        // Sonner toast
+        toast.success("Login successful!", {
+          description: `Welcome back, ${data.user.name}!`,
+        });
+
+        setTimeout(() => {
+          if (data.user.role === "admin") {
+            window.location.href = "/admin/dashboard";
+          } else if (data.user.role === "employee") {
+            window.location.href = "/employee/dashboard";
+          } else {
+            window.location.href = "/client/dashboard";
+          }
+        }, 1500);
       } else {
-        setError(data.error || "Login failed");
+        toast.error("Login failed", {
+          description: data.error || "Invalid credentials",
+        });
       }
     } catch (err) {
-      setError("Something went wrong");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSeed = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch("/api/seed");
-      const data = await response.json();
-      alert(data.message);
-    } catch (err) {
-      alert("Seed failed");
+      toast.error("Error", {
+        description: "Something went wrong",
+      });
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
-        <h1 className="text-2xl font-bold text-center mb-6">
-          ProjectPulse Login
-        </h1>
-
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-            {error}
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background to-muted/30 p-4">
+      <Card className="w-full max-w-md">
+        <CardHeader className="text-center">
+          <div className="w-16 h-16 bg-primary rounded-lg flex items-center justify-center mx-auto mb-4">
+            <span className="text-primary-foreground text-2xl font-bold">
+              PP
+            </span>
           </div>
-        )}
+          <CardTitle className="text-2xl">Welcome to ProjectPulse</CardTitle>
+          <CardDescription>
+            Sign in to your account or try demo login
+          </CardDescription>
+        </CardHeader>
 
-        <form onSubmit={handleLogin}>
-          <div className="mb-4">
-            <label className="block text-gray-700 mb-2">Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md"
-              placeholder="Enter your email"
-              required
-            />
-          </div>
+        <CardContent>
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div>
+              <Input
+                type="email"
+                placeholder="Email address"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
 
-          <div className="mb-6">
-            <label className="block text-gray-700 mb-2">Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md"
-              placeholder="Enter your password"
-              required
-            />
-          </div>
+            <div>
+              <Input
+                type="password"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50"
-          >
-            {loading ? "Logging in..." : "Login"}
-          </button>
-        </form>
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? "Signing in..." : "Sign In"}
+            </Button>
+          </form>
 
-        {/* Demo Users Section */}
-        <div className="mt-8 p-4 bg-gray-50 rounded-md">
-          <h3 className="font-bold mb-2">Demo Credentials:</h3>
-          <div className="space-y-2 text-sm">
-            <p>
-              <strong>Admin:</strong> admin@projectpulse.com / admin123
+          <div className="mt-6">
+            <p className="text-sm text-muted-foreground mb-3">
+              Try demo accounts:
             </p>
-            <p>
-              <strong>Employee:</strong> john@projectpulse.com / employee123
-            </p>
-            <p>
-              <strong>Client:</strong> sarah@clientco.com / client123
-            </p>
+            <div className="space-y-2">
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => {
+                  setEmail("admin@projectpulse.com");
+                  setPassword("admin123");
+                  toast.info("Demo Admin loaded", {
+                    description: "Click Sign In button to login",
+                  });
+                }}
+              >
+                Admin Demo
+              </Button>
+
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => {
+                  setEmail("john@projectpulse.com");
+                  setPassword("employee123");
+                  toast.info("Demo Employee loaded", {
+                    description: "Click Sign In button to login",
+                  });
+                }}
+              >
+                Employee Demo
+              </Button>
+
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => {
+                  setEmail("sarah@clientco.com");
+                  setPassword("client123");
+                  toast.info("Demo Client loaded", {
+                    description: "Click Sign In button to login",
+                  });
+                }}
+              >
+                Client Demo
+              </Button>
+            </div>
           </div>
 
-          <button
-            onClick={handleSeed}
-            disabled={loading}
-            className="mt-4 w-full bg-green-600 text-white py-2 px-4 rounded-md text-sm hover:bg-green-700 disabled:opacity-50"
-          >
-            {loading ? "Creating..." : "Create Demo Users (First Time)"}
-          </button>
-        </div>
-      </div>
+          <div className="mt-6 text-center">
+            <Link href="/">
+              <Button variant="ghost" className="text-primary">
+                ← Back to Home
+              </Button>
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
