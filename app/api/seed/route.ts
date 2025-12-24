@@ -1,32 +1,41 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
 import User from '@/models/User';
+import bcrypt from 'bcryptjs';
 
-export async function GET(request: NextRequest) {
+// GET request এর জন্য
+export async function GET() {
   try {
     await connectDB();
     
     // আগের সব ডেটা ডিলিট করবো
     await User.deleteMany({});
     
+    // Password hash করবো
+    const hashedPasswords = await Promise.all([
+      bcrypt.hash('admin123', 10),
+      bcrypt.hash('employee123', 10),
+      bcrypt.hash('client123', 10)
+    ]);
+    
     // ডেমো ইউজার তৈরি করবো
     const demoUsers = [
       {
         name: 'Admin User',
         email: 'admin@projectpulse.com',
-        password: 'admin123',
+        password: hashedPasswords[0],
         role: 'admin'
       },
       {
         name: 'John Employee',
         email: 'john@projectpulse.com',
-        password: 'employee123',
+        password: hashedPasswords[1],
         role: 'employee'
       },
       {
         name: 'Sarah Client',
         email: 'sarah@clientco.com',
-        password: 'client123',
+        password: hashedPasswords[2],
         role: 'client'
       }
     ];
@@ -37,10 +46,15 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: 'Demo users created successfully!',
-      users: demoUsers.map(u => ({ email: u.email, password: u.password, role: u.role }))
+      users: [
+        { email: 'admin@projectpulse.com', password: 'admin123', role: 'admin' },
+        { email: 'john@projectpulse.com', password: 'employee123', role: 'employee' },
+        { email: 'sarah@clientco.com', password: 'client123', role: 'client' }
+      ]
     });
     
   } catch (error) {
+    console.error('Seed error:', error);
     return NextResponse.json(
       { success: false, error: 'Seed failed' },
       { status: 500 }

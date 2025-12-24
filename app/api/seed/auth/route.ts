@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import connectDB from '@/lib/db';
+
 import User from '@/models/User';
-import { createToken } from '@/lib/auth';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import connectDB from '@/lib/db';
 
 export async function POST(request: NextRequest) {
   try {
@@ -28,7 +30,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Password চেক করবো
-    const isPasswordValid = await user.checkPassword(password);
+    const isPasswordValid = await bcrypt.compare(password, user.password);
     
     if (!isPasswordValid) {
       return NextResponse.json(
@@ -38,7 +40,11 @@ export async function POST(request: NextRequest) {
     }
     
     // JWT Token তৈরি করবো
-    const token = createToken(user._id.toString(), user.role);
+    const token = jwt.sign(
+      { userId: user._id.toString(), role: user.role },
+      process.env.JWT_SECRET || 'fallback_secret_key',
+      { expiresIn: '7d' }
+    );
     
     // Response দিবো
     return NextResponse.json({
@@ -53,6 +59,7 @@ export async function POST(request: NextRequest) {
     });
     
   } catch (error) {
+    console.error('Login error:', error);
     return NextResponse.json(
       { error: 'Login failed' },
       { status: 500 }

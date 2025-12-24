@@ -1,5 +1,4 @@
 import mongoose from 'mongoose';
-import bcrypt from 'bcryptjs';
 
 // User Schema
 const userSchema = new mongoose.Schema({
@@ -27,19 +26,7 @@ const userSchema = new mongoose.Schema({
   }
 });
 
-// Password hash করবে save করার আগে
-userSchema.pre('save', async function(next) {
-  if (!this.isModified('password')) return next();
-  
-  const salt = await bcrypt.genSalt(10);
-  this.password = await bcrypt.hash(this.password, salt);
-  next();
-});
-
-// Password check করার method
-userSchema.methods.checkPassword = async function(password: string) {
-  return await bcrypt.compare(password, this.password);
-};
-
+// Model 
 const User = mongoose.models.User || mongoose.model('User', userSchema);
+
 export default User;

@@ -31,11 +31,11 @@ export default function LoginPage() {
 
         // Role অনুযায়ী redirect করবো
         if (data.user.role === "admin") {
-          router.push("/admin/dashboard");
+          window.location.href = "/admin/dashboard";
         } else if (data.user.role === "employee") {
-          router.push("/employee/dashboard");
+          window.location.href = "/employee/dashboard";
         } else {
-          router.push("/client/dashboard");
+          window.location.href = "/client/dashboard";
         }
       } else {
         setError(data.error || "Login failed");
