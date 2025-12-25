@@ -63,7 +63,7 @@ export default function HowItWorks() {
   if (!mounted) return null;
 
   return (
-    <section className="relative py-16 md:py-24 px-4 bg-background">
+    <section className="relative py-8 md:py-12 px-4 bg-background">
       {/* Background accents */}
       <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -translate-y-32 translate-x-32"></div>
       <div className="absolute bottom-0 left-0 w-80 h-80 bg-destructive/5 rounded-full blur-3xl translate-y-32 -translate-x-32"></div>

@@ -24,7 +24,7 @@ export default function HeroSection() {
   if (!mounted) return null;
 
   return (
-    <section className="relative overflow-hidden pt-12 md:pt-16 pb-16 md:pb-24 px-4">
+    <section className="relative overflow-hidden py-8 md:py-12 pb-16 md:pb-24 px-4">
       {/* Background matching Navbar */}
       <div
         className={`absolute inset-0 ${
