@@ -100,3 +100,31 @@ export interface FeedbackFormData {
   comments: string;
   flagIssue: boolean;
 }
+
+
+// Add these interfaces
+export interface Risk {
+  _id: string;
+  project: string | Project;
+  title: string;
+  description: string;
+  severity: 'low' | 'medium' | 'high';
+  impact: 'low' | 'medium' | 'high' | 'critical';
+  mitigationPlan: string;
+  status: 'open' | 'in_progress' | 'resolved';
+  reportedBy: string | User;
+  assignedTo?: string | User;
+  dueDate?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Activity {
+  _id: string;
+  project: string | Project;
+  type: 'checkin' | 'feedback' | 'risk' | 'status_change';
+  title: string;
+  description: string;
+  user: string | User;
+  createdAt: string;
+}

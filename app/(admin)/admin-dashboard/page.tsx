@@ -83,7 +83,7 @@ export default function AdminDashboard() {
           </p>
         </div>
         <div className="flex gap-3">
-          <Link href="/admin/projects">
+          <Link href="/projects">
             <Button>View All Projects</Button>
           </Link>
           <Button variant="outline">Generate Report</Button>
