@@ -29,6 +29,31 @@ export interface Project {
   updatedAt?: string;
 }
 
+// Add these missing interfaces
+export interface Checkin {
+  _id: string;
+  project: string | Project;
+  employee: string | User;
+  weekStartDate: string;
+  progressSummary: string;
+  blockers: string;
+  confidenceLevel: number;
+  completionPercentage: number;
+  submittedAt: string;
+}
+
+export interface Feedback {
+  _id: string;
+  project: string | Project;
+  client: string | User;
+  weekStartDate: string;
+  satisfactionRating: number;
+  communicationRating: number;
+  comments: string;
+  flagIssue: boolean;
+  submittedAt: string;
+}
+
 export interface CreateProjectData {
   name: string;
   description: string;
@@ -59,7 +84,7 @@ export interface ApiResponse<T = Record<string, unknown>> {
   error?: string;
 }
 
-// For forms
+// Remove these duplicate interfaces (keep only one)
 export interface CheckinFormData {
   projectId: string;
   progressSummary: string;

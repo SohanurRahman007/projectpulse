@@ -110,11 +110,11 @@ export default function Navbar() {
                 <Button
                   onClick={() => {
                     if (user.role === "admin") {
-                      window.location.href = "/admin/dashboard";
+                      window.location.href = "/admin-dashboard";
                     } else if (user.role === "employee") {
-                      window.location.href = "/employee/dashboard";
+                      window.location.href = "/employee-dashboard";
                     } else {
-                      window.location.href = "/client/dashboard";
+                      window.location.href = "/client-dashboard";
                     }
                   }}
                 >
