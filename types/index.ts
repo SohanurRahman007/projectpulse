@@ -7,13 +7,13 @@ export interface User {
 }
 
 export interface Project {
-  _id: string;  // MongoDB uses _id
+  _id: string;
   name: string;
   description: string;
   status: 'on_track' | 'at_risk' | 'critical' | 'completed';
   healthScore: number;
-  startDate: string;  // API returns string, Date conversion in component
-  endDate: string;    // API returns string, Date conversion in component
+  startDate: string;
+  endDate: string;
   client: {
     _id: string;
     name: string;
@@ -34,8 +34,8 @@ export interface CreateProjectData {
   description: string;
   startDate: string;
   endDate: string;
-  client: string;  // client ID
-  employees: string[];  // array of employee IDs
+  client: string;
+  employees: string[];
 }
 
 export interface DashboardStats {
@@ -51,8 +51,8 @@ export interface LoginResponse {
   user: User;
 }
 
-// For API responses - Generic type without 'any'
-export interface ApiResponse<T = unknown> {
+// Generic API response
+export interface ApiResponse<T = Record<string, unknown>> {
   success: boolean;
   message?: string;
   data?: T;
@@ -74,11 +74,4 @@ export interface FeedbackFormData {
   communicationRating: number;
   comments: string;
   flagIssue: boolean;
-}
-
-// For API route handlers
-export interface ApiHandlerResponse {
-  success: boolean;
-  message?: string;
-  [key: string]: unknown;  // Flexible for additional data
 }
