@@ -1,9 +1,12 @@
 // Common types for the whole application
+
 export interface User {
-  id: string;
+  _id: string;
   name: string;
   email: string;
   role: 'admin' | 'employee' | 'client';
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Project {
@@ -29,7 +32,13 @@ export interface Project {
   updatedAt?: string;
 }
 
-// Add these missing interfaces
+export interface DashboardStats {
+  totalProjects: number;
+  activeProjects: number;
+  atRiskProjects: number;
+  avgHealthScore: number;
+}
+
 export interface Checkin {
   _id: string;
   project: string | Project;
@@ -54,55 +63,6 @@ export interface Feedback {
   submittedAt: string;
 }
 
-export interface CreateProjectData {
-  name: string;
-  description: string;
-  startDate: string;
-  endDate: string;
-  client: string;
-  employees: string[];
-}
-
-export interface DashboardStats {
-  totalProjects: number;
-  activeProjects: number;
-  atRiskProjects: number;
-  avgHealthScore: number;
-}
-
-export interface LoginResponse {
-  success: boolean;
-  token: string;
-  user: User;
-}
-
-// Generic API response
-export interface ApiResponse<T = Record<string, unknown>> {
-  success: boolean;
-  message?: string;
-  data?: T;
-  error?: string;
-}
-
-// Remove these duplicate interfaces (keep only one)
-export interface CheckinFormData {
-  projectId: string;
-  progressSummary: string;
-  blockers: string;
-  confidenceLevel: number;
-  completionPercentage: number;
-}
-
-export interface FeedbackFormData {
-  projectId: string;
-  satisfactionRating: number;
-  communicationRating: number;
-  comments: string;
-  flagIssue: boolean;
-}
-
-
-// Add these interfaces
 export interface Risk {
   _id: string;
   project: string | Project;
@@ -121,10 +81,48 @@ export interface Risk {
 
 export interface Activity {
   _id: string;
-  project: string | Project;
-  type: 'checkin' | 'feedback' | 'risk' | 'status_change';
+  type: 'checkin' | 'feedback' | 'risk' | 'health_updated' | 'status_change';
   title: string;
+  description?: string;
+  project?: string | { _id: string; name: string };
+  user?: string | { _id: string; name: string };
+  createdAt: string | Date;
+}
+
+export interface CreateProjectData {
+  name: string;
   description: string;
-  user: string | User;
-  createdAt: string;
+  startDate: string;
+  endDate: string;
+  client: string;
+  employees: string[];
+}
+
+export interface CheckinFormData {
+  projectId: string;
+  progressSummary: string;
+  blockers: string;
+  confidenceLevel: number;
+  completionPercentage: number;
+}
+
+export interface FeedbackFormData {
+  projectId: string;
+  satisfactionRating: number;
+  communicationRating: number;
+  comments: string;
+  flagIssue: boolean;
+}
+
+export interface LoginResponse {
+  success: boolean;
+  token: string;
+  user: User;
+}
+
+export interface ApiResponse<T = Record<string, unknown>> {
+  success: boolean;
+  message?: string;
+  data?: T;
+  error?: string;
 }
