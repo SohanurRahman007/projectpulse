@@ -1,10 +1,18 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import {
   Calendar,
@@ -12,11 +20,18 @@ import {
   AlertTriangle,
   MessageSquare,
   CheckCircle,
+  ArrowLeft,
+  Users,
+  TrendingUp,
+  Clock,
+  FileText,
+  Shield,
 } from "lucide-react";
 import { Project, Activity } from "@/types";
 
 export default function ProjectDetailsPage() {
   const params = useParams();
+  const router = useRouter();
   const projectId = params.id as string;
 
   const [project, setProject] = useState<Project | null>(null);
@@ -32,16 +47,33 @@ export default function ProjectDetailsPage() {
 
   const fetchProjectDetails = async () => {
     try {
-      const response = await fetch(`/api/projects`);
-      const data = await response.json();
+      // Try specific project endpoint first
+      const response = await fetch(`/api/projects/${projectId}`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setProject(data.project);
+          return;
+        }
+      }
 
-      if (data.success) {
-        const foundProject = data.projects.find(
+      // Fallback to all projects endpoint
+      const allResponse = await fetch(`/api/projects`);
+      const allData = await allResponse.json();
+
+      if (allData.success) {
+        const foundProject = allData.projects?.find(
           (p: Project) => p._id === projectId
         );
-        setProject(foundProject || null);
+        if (foundProject) {
+          setProject(foundProject);
+        } else {
+          toast.error("Project not found");
+          router.push("/projects");
+        }
       }
     } catch (error) {
+      console.error("Error fetching project details:", error);
       toast.error("Failed to load project details");
     }
   };
@@ -52,10 +84,10 @@ export default function ProjectDetailsPage() {
       const data = await response.json();
 
       if (data.success) {
-        setActivities(data.activities);
+        setActivities(data.activities || []);
       }
     } catch (error) {
-      console.error("Failed to fetch activities");
+      console.error("Failed to fetch activities:", error);
     } finally {
       setLoading(false);
     }
@@ -69,18 +101,66 @@ export default function ProjectDetailsPage() {
         return <MessageSquare className="w-4 h-4 text-green-600" />;
       case "risk":
         return <AlertTriangle className="w-4 h-4 text-red-600" />;
+      case "health_updated":
+        return <TrendingUp className="w-4 h-4 text-purple-600" />;
       default:
-        return <Calendar className="w-4 h-4 text-gray-600" />;
+        return <Clock className="w-4 h-4 text-gray-600" />;
     }
+  };
+
+  const getActivityColor = (type: string) => {
+    switch (type) {
+      case "checkin":
+        return "bg-blue-50 border-blue-200";
+      case "feedback":
+        return "bg-green-50 border-green-200";
+      case "risk":
+        return "bg-red-50 border-red-200";
+      case "health_updated":
+        return "bg-purple-50 border-purple-200";
+      default:
+        return "bg-gray-50 border-gray-200";
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  };
+
+  const formatTimeAgo = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInHours = Math.floor(
+      (now.getTime() - date.getTime()) / (1000 * 60 * 60)
+    );
+
+    if (diffInHours < 1) return "Just now";
+    if (diffInHours < 24) return `${diffInHours}h ago`;
+    if (diffInHours < 168) return `${Math.floor(diffInHours / 24)}d ago`;
+    return formatDate(dateString);
   };
 
   if (loading) {
     return (
       <div className="p-6">
+        <div className="mb-6">
+          <div className="h-10 w-32 bg-gray-200 rounded animate-pulse"></div>
+        </div>
         <div className="h-8 w-64 bg-gray-200 rounded animate-pulse mb-6"></div>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 h-96 bg-gray-100 rounded animate-pulse"></div>
-          <div className="h-96 bg-gray-100 rounded animate-pulse"></div>
+          <div className="lg:col-span-2 space-y-6">
+            <div className="h-48 bg-gray-100 rounded animate-pulse"></div>
+            <div className="h-64 bg-gray-100 rounded animate-pulse"></div>
+          </div>
+          <div className="space-y-6">
+            <div className="h-48 bg-gray-100 rounded animate-pulse"></div>
+            <div className="h-64 bg-gray-100 rounded animate-pulse"></div>
+            <div className="h-48 bg-gray-100 rounded animate-pulse"></div>
+          </div>
         </div>
       </div>
     );
@@ -89,29 +169,57 @@ export default function ProjectDetailsPage() {
   if (!project) {
     return (
       <div className="p-6">
-        <h1 className="text-2xl font-bold">Project not found</h1>
-        <p className="text-gray-600">
-          The project you are looking for does not exist.
-        </p>
+        <div className="mb-6">
+          <Link href="/projects">
+            <Button variant="outline" className="gap-2">
+              <ArrowLeft className="w-4 h-4" />
+              Back to Projects
+            </Button>
+          </Link>
+        </div>
+        <div className="text-center py-12">
+          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <AlertTriangle className="w-8 h-8 text-gray-400" />
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">
+            Project not found
+          </h1>
+          <p className="text-gray-600">
+            The project you are looking for does not exist.
+          </p>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="p-6">
-      <div className="flex justify-between items-start mb-6">
+      {/* Back Button */}
+      <div className="mb-6">
+        <Link href="/projects">
+          <Button variant="outline" className="gap-2">
+            <ArrowLeft className="w-4 h-4" />
+            Back to Projects
+          </Button>
+        </Link>
+      </div>
+
+      {/* Header */}
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-8">
         <div>
-          <h1 className="text-3xl font-bold">{project.name}</h1>
-          <p className="text-gray-600">{project.description}</p>
+          <h1 className="text-3xl font-bold text-gray-900">{project.name}</h1>
+          <p className="text-gray-600 mt-2">{project.description}</p>
         </div>
         <Badge
-          className={
+          className={`px-4 py-1.5 text-sm font-medium ${
             project.status === "on_track"
-              ? "bg-green-100 text-green-800"
+              ? "bg-green-100 text-green-800 border-green-200"
               : project.status === "at_risk"
-              ? "bg-yellow-100 text-yellow-800"
-              : "bg-red-100 text-red-800"
-          }
+              ? "bg-yellow-100 text-yellow-800 border-yellow-200"
+              : project.status === "critical"
+              ? "bg-red-100 text-red-800 border-red-200"
+              : "bg-blue-100 text-blue-800 border-blue-200"
+          }`}
         >
           {project.status.replace("_", " ").toUpperCase()}
         </Badge>
@@ -121,25 +229,33 @@ export default function ProjectDetailsPage() {
         {/* Left Column - Project Details */}
         <div className="lg:col-span-2 space-y-6">
           {/* Health Score Card */}
-          <Card>
+          <Card className="border border-gray-200">
             <CardHeader>
-              <CardTitle>Project Health</CardTitle>
+              <CardTitle className="text-xl font-bold text-gray-900">
+                Project Health
+              </CardTitle>
+              <CardDescription className="text-gray-600">
+                Current project health status and progress
+              </CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-2xl font-bold">
-                    Health Score: {project.healthScore}%
-                  </span>
-                  <div
-                    className={`text-2xl font-bold ${
-                      project.healthScore >= 80
-                        ? "text-green-600"
-                        : project.healthScore >= 60
-                        ? "text-yellow-600"
-                        : "text-red-600"
-                    }`}
-                  >
+            <CardContent className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-4xl font-bold text-gray-900">
+                    {project.healthScore}%
+                  </div>
+                  <p className="text-gray-500">Overall Health Score</p>
+                </div>
+                <div
+                  className={`px-4 py-2 rounded-lg ${
+                    project.healthScore >= 80
+                      ? "bg-green-50 text-green-700"
+                      : project.healthScore >= 60
+                      ? "bg-yellow-50 text-yellow-700"
+                      : "bg-red-50 text-red-700"
+                  }`}
+                >
+                  <div className="text-xl font-bold">
                     {project.healthScore >= 80
                       ? "ON TRACK"
                       : project.healthScore >= 60
@@ -147,65 +263,116 @@ export default function ProjectDetailsPage() {
                       : "CRITICAL"}
                   </div>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-4">
-                  <div
-                    className={`h-4 rounded-full ${
-                      project.healthScore >= 80
-                        ? "bg-green-600"
-                        : project.healthScore >= 60
-                        ? "bg-yellow-600"
-                        : "bg-red-600"
-                    }`}
-                    style={{ width: `${project.healthScore}%` }}
-                  ></div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Health Progress</span>
+                  <span className="font-medium">{project.healthScore}%</span>
                 </div>
+                <Progress
+                  value={project.healthScore}
+                  className={`h-2 ${
+                    project.healthScore >= 80
+                      ? "[&>div]:bg-green-500"
+                      : project.healthScore >= 60
+                      ? "[&>div]:bg-yellow-500"
+                      : "[&>div]:bg-red-500"
+                  }`}
+                />
               </div>
             </CardContent>
           </Card>
 
           {/* Activity Timeline */}
-          <Card>
+          <Card className="border border-gray-200">
             <CardHeader>
-              <CardTitle>Activity Timeline</CardTitle>
+              <CardTitle className="text-xl font-bold text-gray-900">
+                Activity Timeline
+              </CardTitle>
+              <CardDescription className="text-gray-600">
+                Recent updates and activities for this project
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {activities.length === 0 ? (
-                  <p className="text-gray-500 text-center py-4">
+              {activities.length === 0 ? (
+                <div className="text-center py-8">
+                  <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Clock className="w-8 h-8 text-gray-400" />
+                  </div>
+                  <h3 className="font-medium text-gray-900 mb-2">
                     No activity yet
+                  </h3>
+                  <p className="text-gray-500">
+                    Activity will appear here when updates are made
                   </p>
-                ) : (
-                  activities.map((activity) => (
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {activities.map((activity) => (
                     <div
                       key={activity._id}
-                      className="flex items-start space-x-3 p-3 border rounded-lg"
+                      className={`flex items-start gap-4 p-4 rounded-lg border ${getActivityColor(
+                        activity.type
+                      )}`}
                     >
-                      <div className="mt-1">
+                      <div
+                        className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                          activity.type === "checkin"
+                            ? "bg-blue-100"
+                            : activity.type === "feedback"
+                            ? "bg-green-100"
+                            : activity.type === "risk"
+                            ? "bg-red-100"
+                            : "bg-purple-100"
+                        }`}
+                      >
                         {getActivityIcon(activity.type)}
                       </div>
-                      <div className="flex-1">
-                        <div className="flex justify-between items-start">
-                          <h4 className="font-medium">{activity.title}</h4>
-                          <span className="text-sm text-gray-500">
-                            {new Date(activity.createdAt).toLocaleDateString()}
-                          </span>
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
+                          <div>
+                            <h4 className="font-medium text-gray-900">
+                              {activity.title}
+                            </h4>
+                            {activity.description && (
+                              <p className="text-sm text-gray-600 mt-1">
+                                {activity.description}
+                              </p>
+                            )}
+                          </div>
+                          <div className="text-sm text-gray-500 whitespace-nowrap">
+                            {formatTimeAgo(activity.createdAt.toString())}
+                          </div>
                         </div>
-                        <p className="text-sm text-gray-600 mt-1">
-                          {activity.description}
-                        </p>
-                        <div className="flex items-center gap-1 mt-2">
-                          <User className="w-3 h-3" />
-                          <span className="text-xs text-gray-500">
-                            {typeof activity.user === "object"
-                              ? activity.user.name
-                              : "User"}
-                          </span>
+
+                        <div className="flex items-center justify-between mt-3">
+                          <div className="flex items-center gap-2 text-xs text-gray-500">
+                            <Clock className="w-3 h-3" />
+                            {formatDate(activity.createdAt.toString())}
+                          </div>
+                          {activity.user &&
+                            typeof activity.user === "object" &&
+                            activity.user.name && (
+                              <div className="text-xs text-gray-500">
+                                By: {activity.user.name}
+                              </div>
+                            )}
                         </div>
                       </div>
                     </div>
-                  ))
-                )}
-              </div>
+                  ))}
+                </div>
+              )}
+
+              {activities.length > 0 && (
+                <div className="mt-6 pt-4 border-t border-gray-200">
+                  <Button variant="outline" className="w-full">
+                    View All Activity
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -213,34 +380,63 @@ export default function ProjectDetailsPage() {
         {/* Right Column - Project Info */}
         <div className="space-y-6">
           {/* Client Info */}
-          <Card>
+          <Card className="border border-gray-200">
             <CardHeader>
-              <CardTitle>Client</CardTitle>
+              <CardTitle className="text-lg font-bold text-gray-900">
+                Client Information
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <User className="w-4 h-4 text-gray-400" />
-                  <span className="font-medium">{project.client.name}</span>
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-blue-50 rounded-full flex items-center justify-center">
+                    <User className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">
+                      {project.client.name}
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      {project.client.email}
+                    </p>
+                    <Badge className="mt-1 bg-blue-50 text-blue-700 border-blue-200">
+                      Client
+                    </Badge>
+                  </div>
                 </div>
-                <p className="text-sm text-gray-600">{project.client.email}</p>
               </div>
             </CardContent>
           </Card>
 
           {/* Team Members */}
-          <Card>
+          <Card className="border border-gray-200">
             <CardHeader>
-              <CardTitle>Team Members</CardTitle>
+              <CardTitle className="text-lg font-bold text-gray-900">
+                Team Members
+              </CardTitle>
+              <CardDescription className="text-gray-600">
+                {project.employees.length} team members
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
                 {project.employees.map((employee) => (
-                  <div key={employee._id} className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-gray-200 rounded-full"></div>
-                    <div>
-                      <p className="font-medium">{employee.name}</p>
-                      <p className="text-xs text-gray-500">{employee.role}</p>
+                  <div
+                    key={employee._id}
+                    className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50"
+                  >
+                    <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
+                      <span className="text-sm font-medium text-gray-700">
+                        {employee.name.charAt(0)}
+                      </span>
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium text-gray-900">
+                        {employee.name}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {employee.role || "Team Member"}
+                      </p>
                     </div>
                   </div>
                 ))}
@@ -249,33 +445,45 @@ export default function ProjectDetailsPage() {
           </Card>
 
           {/* Timeline */}
-          <Card>
+          <Card className="border border-gray-200">
             <CardHeader>
-              <CardTitle>Timeline</CardTitle>
+              <CardTitle className="text-lg font-bold text-gray-900">
+                Project Timeline
+              </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-500">Start Date</span>
-                  <span className="font-medium">
-                    {new Date(project.startDate).toLocaleDateString()}
+            <CardContent className="space-y-4">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-gray-400" />
+                    <span className="text-sm text-gray-600">Start Date</span>
+                  </div>
+                  <span className="font-medium text-gray-900">
+                    {formatDate(project.startDate)}
                   </span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-500">End Date</span>
-                  <span className="font-medium">
-                    {new Date(project.endDate).toLocaleDateString()}
+
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-gray-400" />
+                    <span className="text-sm text-gray-600">End Date</span>
+                  </div>
+                  <span className="font-medium text-gray-900">
+                    {formatDate(project.endDate)}
                   </span>
                 </div>
-                <div className="pt-2 border-t">
-                  <div className="text-sm text-gray-500">Duration</div>
-                  <div className="font-medium">
-                    {Math.ceil(
-                      (new Date(project.endDate).getTime() -
-                        new Date(project.startDate).getTime()) /
-                        (1000 * 60 * 60 * 24)
-                    )}{" "}
-                    days
+
+                <div className="pt-3 border-t border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Duration</span>
+                    <span className="font-medium text-gray-900">
+                      {Math.ceil(
+                        (new Date(project.endDate).getTime() -
+                          new Date(project.startDate).getTime()) /
+                          (1000 * 60 * 60 * 24)
+                      )}{" "}
+                      days
+                    </span>
                   </div>
                 </div>
               </div>
@@ -283,20 +491,29 @@ export default function ProjectDetailsPage() {
           </Card>
 
           {/* Quick Actions */}
-          <Card>
+          <Card className="border border-gray-200">
             <CardHeader>
-              <CardTitle>Quick Actions</CardTitle>
+              <CardTitle className="text-lg font-bold text-gray-900">
+                Quick Actions
+              </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <Button className="w-full">Update Health Score</Button>
-                <Button variant="outline" className="w-full">
-                  Report Risk
-                </Button>
-                <Button variant="outline" className="w-full">
-                  Generate Report
-                </Button>
-              </div>
+            <CardContent className="space-y-3">
+              <Button className="w-full justify-start gap-2">
+                <TrendingUp className="w-4 h-4" />
+                Update Health Score
+              </Button>
+              <Button variant="outline" className="w-full justify-start gap-2">
+                <AlertTriangle className="w-4 h-4" />
+                Report Risk
+              </Button>
+              <Button variant="outline" className="w-full justify-start gap-2">
+                <FileText className="w-4 h-4" />
+                Generate Report
+              </Button>
+              <Button variant="outline" className="w-full justify-start gap-2">
+                <Shield className="w-4 h-4" />
+                Manage Team
+              </Button>
             </CardContent>
           </Card>
         </div>
