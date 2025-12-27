@@ -1,85 +1,135 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { User } from "@/types";
+import { BarChart, Menu } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { useTheme } from "next-themes";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { EmployeeSidebar } from "@/components/dashboard/EmployeeSidebar";
 
 export default function EmployeeLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const { theme } = useTheme();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      const token = localStorage.getItem("token");
-      const userData = localStorage.getItem("user");
+    setMounted(true);
+    const token = localStorage.getItem("token");
+    const userData = localStorage.getItem("user");
 
-      if (!token || !userData) {
-        window.location.href = "/login";
-        return;
-      }
+    if (!token || !userData) {
+      window.location.href = "/login";
+      return;
+    }
 
+    try {
       const parsedUser: User = JSON.parse(userData);
       if (parsedUser.role !== "employee") {
         window.location.href = "/login";
         return;
       }
-
       setUser(parsedUser);
+    } catch (e) {
+      window.location.href = "/login";
+    } finally {
       setLoading(false);
-    }, 0);
-
-    return () => clearTimeout(timer);
+    }
   }, []);
 
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    window.location.href = "/login";
-  };
+  if (!mounted) return null;
+
+  const isDark = theme === "dark";
+  const bgClass = isDark ? "bg-black text-white" : "bg-white text-black";
+  const borderClass = isDark ? "border-zinc-800" : "border-zinc-200";
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        Loading...
+      <div
+        className={`min-h-screen flex items-center justify-center ${bgClass}`}
+      >
+        <div className="animate-pulse font-bold tracking-widest uppercase">
+          Pulse...
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <nav className="bg-white shadow-md">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center">
-              <h1 className="text-xl font-bold">ProjectPulse Employee</h1>
-              <div className="ml-10">
-                <Link
-                  href="/employee/dashboard"
-                  className="px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-100"
+    <div
+      className={`min-h-screen flex transition-colors duration-300 ${bgClass}`}
+    >
+      {/* Desktop Sidebar */}
+      <aside className="hidden lg:block w-72 h-screen sticky top-0 shrink-0">
+        <EmployeeSidebar />
+      </aside>
+
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Top Navbar */}
+        <header
+          className={`h-20 border-b flex items-center justify-between px-6 md:px-10 sticky top-0 z-40 backdrop-blur-md ${
+            isDark
+              ? "bg-black/80 border-zinc-800"
+              : "bg-white/80 border-zinc-200"
+          }`}
+        >
+          <div className="flex items-center gap-4">
+            <div className="lg:hidden">
+              <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
+                <SheetTrigger asChild>
+                  <Button variant="ghost" size="icon">
+                    <Menu className="h-6 w-6" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent
+                  side="left"
+                  className={`p-0 w-72 ${bgClass} ${borderClass}`}
                 >
-                  Dashboard
-                </Link>
-              </div>
+                  <SheetTitle className="sr-only">Employee Menu</SheetTitle>
+                  <EmployeeSidebar />
+                </SheetContent>
+              </Sheet>
             </div>
-            <div className="flex items-center space-x-4">
-              <span>Welcome, {user?.name}</span>
-              <button
-                onClick={handleLogout}
-                className="bg-red-600 text-white px-4 py-2 rounded-md text-sm hover:bg-red-700"
-              >
-                Logout
-              </button>
+
+            <div className="hidden md:block">
+              <span className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground">
+                Squad / <span className="text-destructive">Specialist</span>
+              </span>
             </div>
           </div>
-        </div>
-      </nav>
-      <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-        {children}
-      </main>
+
+          <div className="flex items-center gap-6">
+            <div className="hidden sm:block text-right border-r pr-6 border-zinc-800/50">
+              <p className="text-xs font-black uppercase tracking-tight leading-none mb-1">
+                {user?.name}
+              </p>
+              <div className="flex items-center justify-end gap-1.5">
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-widest italic">
+                  Online
+                </p>
+              </div>
+            </div>
+            <ThemeToggle />
+          </div>
+        </header>
+
+        <main className="flex-1 p-6 md:p-10 overflow-x-hidden">
+          <div className="max-w-7xl mx-auto">{children}</div>
+        </main>
+      </div>
     </div>
   );
 }

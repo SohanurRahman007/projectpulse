@@ -30,17 +30,17 @@ import { useTheme } from "next-themes";
 const menuItems = [
   { title: "Overview", url: "/admin-dashboard", icon: Home },
   { title: "Projects", url: "/projects", icon: BarChart },
-  { title: "Teams", url: "/teams", icon: Users },
-  { title: "Check-ins", url: "/checkins", icon: Calendar },
-  { title: "Feedback", url: "/feedback", icon: FileText },
-  { title: "Risks", url: "/risks", icon: AlertTriangle },
-  { title: "Reports", url: "/reports", icon: FileText },
+  // { title: "Teams", url: "/teams", icon: Users },
+  // { title: "Check-ins", url: "/checkins", icon: Calendar },
+  // { title: "Feedback", url: "/feedback", icon: FileText },
+  // { title: "Risks", url: "/risks", icon: AlertTriangle },
+  // { title: "Reports", url: "/reports", icon: FileText },
 ];
 
 const adminItems = [
   { title: "Create Project", url: "/projects/create", icon: PlusCircle },
-  { title: "System Settings", url: "/admin/settings", icon: Settings },
-  { title: "Security", url: "/admin/security", icon: Shield },
+  // { title: "System Settings", url: "/admin/settings", icon: Settings },
+  // { title: "Security", url: "/admin/security", icon: Shield },
 ];
 
 export function AdminSidebar() {

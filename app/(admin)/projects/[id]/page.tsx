@@ -26,12 +26,18 @@ import {
   Clock,
   FileText,
   Shield,
+  Loader2,
 } from "lucide-react";
 import { Project, Activity } from "@/types";
+import { motion } from "framer-motion";
+import { useTheme } from "next-themes";
+import { cn } from "@/lib/utils";
 
 export default function ProjectDetailsPage() {
   const params = useParams();
   const router = useRouter();
+  const { theme } = useTheme();
+  const [mounted, setMounted] = useState(false);
   const projectId = params.id as string;
 
   const [project, setProject] = useState<Project | null>(null);
@@ -39,6 +45,7 @@ export default function ProjectDetailsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    setMounted(true);
     if (projectId) {
       fetchProjectDetails();
       fetchProjectActivities();
@@ -47,7 +54,6 @@ export default function ProjectDetailsPage() {
 
   const fetchProjectDetails = async () => {
     try {
-      // Try specific project endpoint first
       const response = await fetch(`/api/projects/${projectId}`);
       if (response.ok) {
         const data = await response.json();
@@ -57,7 +63,6 @@ export default function ProjectDetailsPage() {
         }
       }
 
-      // Fallback to all projects endpoint
       const allResponse = await fetch(`/api/projects`);
       const allData = await allResponse.json();
 
@@ -82,7 +87,6 @@ export default function ProjectDetailsPage() {
     try {
       const response = await fetch(`/api/activity?projectId=${projectId}`);
       const data = await response.json();
-
       if (data.success) {
         setActivities(data.activities || []);
       }
@@ -96,30 +100,15 @@ export default function ProjectDetailsPage() {
   const getActivityIcon = (type: string) => {
     switch (type) {
       case "checkin":
-        return <CheckCircle className="w-4 h-4 text-blue-600" />;
+        return <CheckCircle className="w-4 h-4 text-blue-500" />;
       case "feedback":
-        return <MessageSquare className="w-4 h-4 text-green-600" />;
+        return <MessageSquare className="w-4 h-4 text-emerald-500" />;
       case "risk":
-        return <AlertTriangle className="w-4 h-4 text-red-600" />;
+        return <AlertTriangle className="w-4 h-4 text-destructive" />;
       case "health_updated":
-        return <TrendingUp className="w-4 h-4 text-purple-600" />;
+        return <TrendingUp className="w-4 h-4 text-purple-500" />;
       default:
-        return <Clock className="w-4 h-4 text-gray-600" />;
-    }
-  };
-
-  const getActivityColor = (type: string) => {
-    switch (type) {
-      case "checkin":
-        return "bg-blue-50 border-blue-200";
-      case "feedback":
-        return "bg-green-50 border-green-200";
-      case "risk":
-        return "bg-red-50 border-red-200";
-      case "health_updated":
-        return "bg-purple-50 border-purple-200";
-      default:
-        return "bg-gray-50 border-gray-200";
+        return <Clock className="w-4 h-4 text-muted-foreground" />;
     }
   };
 
@@ -137,385 +126,309 @@ export default function ProjectDetailsPage() {
     const diffInHours = Math.floor(
       (now.getTime() - date.getTime()) / (1000 * 60 * 60)
     );
-
     if (diffInHours < 1) return "Just now";
     if (diffInHours < 24) return `${diffInHours}h ago`;
     if (diffInHours < 168) return `${Math.floor(diffInHours / 24)}d ago`;
     return formatDate(dateString);
   };
 
+  if (!mounted) return null;
+  const isDark = theme === "dark";
+
   if (loading) {
     return (
-      <div className="p-6">
-        <div className="mb-6">
-          <div className="h-10 w-32 bg-gray-200 rounded animate-pulse"></div>
-        </div>
-        <div className="h-8 w-64 bg-gray-200 rounded animate-pulse mb-6"></div>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-6">
-            <div className="h-48 bg-gray-100 rounded animate-pulse"></div>
-            <div className="h-64 bg-gray-100 rounded animate-pulse"></div>
-          </div>
-          <div className="space-y-6">
-            <div className="h-48 bg-gray-100 rounded animate-pulse"></div>
-            <div className="h-64 bg-gray-100 rounded animate-pulse"></div>
-            <div className="h-48 bg-gray-100 rounded animate-pulse"></div>
-          </div>
-        </div>
+      <div
+        className={cn(
+          "min-h-screen flex flex-col items-center justify-center",
+          isDark ? "bg-black" : "bg-white"
+        )}
+      >
+        <Loader2 className="w-8 h-8 animate-spin text-destructive mb-4" />
+        <p className="text-[10px] font-bold uppercase tracking-tighter text-muted-foreground">
+          Scanning Pulse...
+        </p>
       </div>
     );
   }
 
-  if (!project) {
-    return (
-      <div className="p-6">
-        <div className="mb-6">
-          <Link href="/projects">
-            <Button variant="outline" className="gap-2">
-              <ArrowLeft className="w-4 h-4" />
-              Back to Projects
-            </Button>
-          </Link>
-        </div>
-        <div className="text-center py-12">
-          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <AlertTriangle className="w-8 h-8 text-gray-400" />
-          </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">
-            Project not found
-          </h1>
-          <p className="text-gray-600">
-            The project you are looking for does not exist.
-          </p>
-        </div>
-      </div>
-    );
-  }
+  if (!project) return null;
 
   return (
-    <div className="p-6">
-      {/* Back Button */}
-      <div className="mb-6">
-        <Link href="/projects">
-          <Button variant="outline" className="gap-2">
-            <ArrowLeft className="w-4 h-4" />
-            Back to Projects
-          </Button>
-        </Link>
-      </div>
+    <div
+      className={cn(
+        "min-h-screen transition-colors duration-300",
+        isDark ? "bg-black text-white" : "bg-white text-black"
+      )}
+    >
+      <div className="max-w-7xl mx-auto p-6 md:p-10 space-y-8">
+        {/* Navigation & Pulse Badge */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+          >
+            <Link href="/projects">
+              <Button
+                variant="ghost"
+                className="pl-0 hover:bg-transparent text-destructive font-bold gap-2 text-xs uppercase tracking-widest mb-4"
+              >
+                <ArrowLeft className="w-4 h-4" /> System Projects
+              </Button>
+            </Link>
+            <h1 className="text-4xl font-bold tracking-tight">
+              {project.name.split(" ")[0]}{" "}
+              <span className="text-destructive font-extrabold">
+                {project.name.split(" ").slice(1).join(" ") || "Pulse"}
+              </span>
+            </h1>
+            <p className="text-muted-foreground mt-2 max-w-xl">
+              {project.description}
+            </p>
+          </motion.div>
 
-      {/* Header */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">{project.name}</h1>
-          <p className="text-gray-600 mt-2">{project.description}</p>
+          <div
+            className={cn(
+              "px-4 py-2 rounded-full border text-[10px] font-bold uppercase tracking-widest flex items-center gap-2",
+              project.status === "critical" || project.status === "at_risk"
+                ? "bg-destructive/10 text-destructive border-destructive/30"
+                : "bg-emerald-500/10 text-emerald-500 border-emerald-500/30"
+            )}
+          >
+            <div
+              className={cn(
+                "w-2 h-2 rounded-full animate-pulse",
+                project.status === "on_track"
+                  ? "bg-emerald-500"
+                  : "bg-destructive"
+              )}
+            />
+            {project.status.replace("_", " ")}
+          </div>
         </div>
-        <Badge
-          className={`px-4 py-1.5 text-sm font-medium ${
-            project.status === "on_track"
-              ? "bg-green-100 text-green-800 border-green-200"
-              : project.status === "at_risk"
-              ? "bg-yellow-100 text-yellow-800 border-yellow-200"
-              : project.status === "critical"
-              ? "bg-red-100 text-red-800 border-red-200"
-              : "bg-blue-100 text-blue-800 border-blue-200"
-          }`}
-        >
-          {project.status.replace("_", " ").toUpperCase()}
-        </Badge>
-      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column - Project Details */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Health Score Card */}
-          <Card className="border border-gray-200">
-            <CardHeader>
-              <CardTitle className="text-xl font-bold text-gray-900">
-                Project Health
-              </CardTitle>
-              <CardDescription className="text-gray-600">
-                Current project health status and progress
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-4xl font-bold text-gray-900">
-                    {project.healthScore}%
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Main Content */}
+          <div className="lg:col-span-2 space-y-8">
+            {/* Health Score Card */}
+            <Card
+              className={cn(
+                "border-none shadow-none rounded-2xl p-1",
+                isDark ? "bg-zinc-900/50" : "bg-zinc-50"
+              )}
+            >
+              <CardHeader className="pb-2">
+                <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-tighter">
+                  Vital Metrics
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="flex items-end justify-between">
+                  <div>
+                    <span className="text-6xl font-black tracking-tighter">
+                      {project.healthScore}%
+                    </span>
+                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mt-1">
+                      Health Integrity
+                    </p>
                   </div>
-                  <p className="text-gray-500">Overall Health Score</p>
-                </div>
-                <div
-                  className={`px-4 py-2 rounded-lg ${
-                    project.healthScore >= 80
-                      ? "bg-green-50 text-green-700"
-                      : project.healthScore >= 60
-                      ? "bg-yellow-50 text-yellow-700"
-                      : "bg-red-50 text-red-700"
-                  }`}
-                >
-                  <div className="text-xl font-bold">
-                    {project.healthScore >= 80
-                      ? "ON TRACK"
-                      : project.healthScore >= 60
-                      ? "AT RISK"
-                      : "CRITICAL"}
+                  <div
+                    className={cn(
+                      "p-3 rounded-xl border font-black text-xs tracking-widest",
+                      project.healthScore >= 80
+                        ? "text-emerald-500 border-emerald-500/20"
+                        : "text-destructive border-destructive/20"
+                    )}
+                  >
+                    {project.healthScore >= 80 ? "OPTIMIZED" : "ATTENTION REQ."}
                   </div>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Health Progress</span>
-                  <span className="font-medium">{project.healthScore}%</span>
                 </div>
                 <Progress
                   value={project.healthScore}
-                  className={`h-2 ${
-                    project.healthScore >= 80
-                      ? "[&>div]:bg-green-500"
-                      : project.healthScore >= 60
-                      ? "[&>div]:bg-yellow-500"
-                      : "[&>div]:bg-red-500"
-                  }`}
+                  className="h-3 bg-zinc-800 rounded-full [&>div]:bg-destructive"
                 />
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          {/* Activity Timeline */}
-          <Card className="border border-gray-200">
-            <CardHeader>
-              <CardTitle className="text-xl font-bold text-gray-900">
-                Activity Timeline
-              </CardTitle>
-              <CardDescription className="text-gray-600">
-                Recent updates and activities for this project
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {activities.length === 0 ? (
-                <div className="text-center py-8">
-                  <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Clock className="w-8 h-8 text-gray-400" />
-                  </div>
-                  <h3 className="font-medium text-gray-900 mb-2">
-                    No activity yet
-                  </h3>
-                  <p className="text-gray-500">
-                    Activity will appear here when updates are made
+            {/* Activity Timeline */}
+            <div className="space-y-4">
+              <h2 className="text-xl font-bold flex items-center gap-3">
+                <div className="w-2 h-2 rounded-full bg-destructive animate-pulse" />
+                Live Feed
+              </h2>
+              <div
+                className={cn(
+                  "rounded-2xl border p-6 space-y-6",
+                  isDark
+                    ? "bg-zinc-950 border-zinc-800"
+                    : "bg-white border-zinc-200"
+                )}
+              >
+                {activities.length === 0 ? (
+                  <p className="text-center py-10 text-muted-foreground text-sm">
+                    No pulse data available.
                   </p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {activities.map((activity) => (
-                    <div
-                      key={activity._id}
-                      className={`flex items-start gap-4 p-4 rounded-lg border ${getActivityColor(
-                        activity.type
-                      )}`}
-                    >
+                ) : (
+                  activities.map((activity) => (
+                    <div key={activity._id} className="flex gap-4 group">
                       <div
-                        className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-                          activity.type === "checkin"
-                            ? "bg-blue-100"
-                            : activity.type === "feedback"
-                            ? "bg-green-100"
-                            : activity.type === "risk"
-                            ? "bg-red-100"
-                            : "bg-purple-100"
-                        }`}
+                        className={cn(
+                          "w-10 h-10 rounded-full flex items-center justify-center border shrink-0",
+                          isDark
+                            ? "bg-zinc-900 border-zinc-800"
+                            : "bg-zinc-100 border-zinc-200"
+                        )}
                       >
                         {getActivityIcon(activity.type)}
                       </div>
-
-                      <div className="flex-1 min-w-0">
-                        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
-                          <div>
-                            <h4 className="font-medium text-gray-900">
-                              {activity.title}
-                            </h4>
-                            {activity.description && (
-                              <p className="text-sm text-gray-600 mt-1">
-                                {activity.description}
-                              </p>
-                            )}
-                          </div>
-                          <div className="text-sm text-gray-500 whitespace-nowrap">
+                      <div className="flex-1 border-b border-zinc-800/30 pb-6 last:border-0">
+                        <div className="flex justify-between items-start">
+                          <h4 className="font-bold group-hover:text-destructive transition-colors">
+                            {activity.title}
+                          </h4>
+                          <span className="text-[10px] font-bold text-muted-foreground uppercase">
                             {formatTimeAgo(activity.createdAt.toString())}
-                          </div>
+                          </span>
                         </div>
-
-                        <div className="flex items-center justify-between mt-3">
-                          <div className="flex items-center gap-2 text-xs text-gray-500">
-                            <Clock className="w-3 h-3" />
-                            {formatDate(activity.createdAt.toString())}
-                          </div>
-                          {activity.user &&
-                            typeof activity.user === "object" &&
-                            activity.user.name && (
-                              <div className="text-xs text-gray-500">
-                                By: {activity.user.name}
-                              </div>
-                            )}
-                        </div>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {activity.description}
+                        </p>
+                        <p className="text-[9px] font-bold text-destructive uppercase tracking-widest mt-3">
+                          {activity.user && typeof activity.user === "object"
+                            ? `Auth: ${activity.user.name}`
+                            : "System Gen"}
+                        </p>
                       </div>
                     </div>
-                  ))}
-                </div>
-              )}
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
 
-              {activities.length > 0 && (
-                <div className="mt-6 pt-4 border-t border-gray-200">
-                  <Button variant="outline" className="w-full">
-                    View All Activity
-                  </Button>
-                </div>
+          {/* Sidebar */}
+          <div className="space-y-6">
+            {/* Quick Actions */}
+            <Card
+              className={cn(
+                "border-none shadow-none rounded-2xl",
+                isDark ? "bg-zinc-900/50" : "bg-zinc-50"
               )}
-            </CardContent>
-          </Card>
-        </div>
+            >
+              <CardHeader>
+                <CardTitle className="text-xs font-black uppercase tracking-widest">
+                  Protocol Actions
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Button className="w-full bg-destructive hover:bg-destructive/90 text-white font-bold rounded-xl h-11">
+                  Update Health
+                </Button>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-full font-bold rounded-xl h-11 border-zinc-800",
+                    isDark ? "hover:bg-white/5" : "hover:bg-black/5"
+                  )}
+                >
+                  Report Risk
+                </Button>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-full font-bold rounded-xl h-11 border-zinc-800",
+                    isDark ? "hover:bg-white/5" : "hover:bg-black/5"
+                  )}
+                >
+                  Export Intel
+                </Button>
+              </CardContent>
+            </Card>
 
-        {/* Right Column - Project Info */}
-        <div className="space-y-6">
-          {/* Client Info */}
-          <Card className="border border-gray-200">
-            <CardHeader>
-              <CardTitle className="text-lg font-bold text-gray-900">
-                Client Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-blue-50 rounded-full flex items-center justify-center">
-                    <User className="w-5 h-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-900">
-                      {project.client.name}
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      {project.client.email}
-                    </p>
-                    <Badge className="mt-1 bg-blue-50 text-blue-700 border-blue-200">
-                      Client
-                    </Badge>
-                  </div>
+            {/* Client Intel */}
+            <div
+              className={cn(
+                "p-6 rounded-2xl border",
+                isDark
+                  ? "bg-zinc-950 border-zinc-800"
+                  : "bg-white border-zinc-200"
+              )}
+            >
+              <h3 className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-4">
+                Client Intel
+              </h3>
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-full bg-destructive/10 border border-destructive/20 flex items-center justify-center text-destructive font-black">
+                  {project.client.name.charAt(0)}
+                </div>
+                <div>
+                  <p className="font-bold leading-none">
+                    {project.client.name}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {project.client.email}
+                  </p>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
 
-          {/* Team Members */}
-          <Card className="border border-gray-200">
-            <CardHeader>
-              <CardTitle className="text-lg font-bold text-gray-900">
-                Team Members
-              </CardTitle>
-              <CardDescription className="text-gray-600">
-                {project.employees.length} team members
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {project.employees.map((employee) => (
-                  <div
-                    key={employee._id}
-                    className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50"
-                  >
-                    <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
-                      <span className="text-sm font-medium text-gray-700">
-                        {employee.name.charAt(0)}
-                      </span>
+            {/* Team Squad */}
+            <div
+              className={cn(
+                "p-6 rounded-2xl border",
+                isDark
+                  ? "bg-zinc-950 border-zinc-800"
+                  : "bg-white border-zinc-200"
+              )}
+            >
+              <h3 className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-4">
+                Assigned Squad ({project.employees.length})
+              </h3>
+              <div className="space-y-4">
+                {project.employees.map((emp) => (
+                  <div key={emp._id} className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center text-[10px] font-bold">
+                      {emp.name.charAt(0)}
                     </div>
-                    <div className="flex-1">
-                      <p className="font-medium text-gray-900">
-                        {employee.name}
+                    <div>
+                      <p className="text-sm font-bold leading-none">
+                        {emp.name}
                       </p>
-                      <p className="text-xs text-gray-500">
-                        {employee.role || "Team Member"}
+                      <p className="text-[9px] text-muted-foreground uppercase font-bold">
+                        {emp.role || "Specialist"}
                       </p>
                     </div>
                   </div>
                 ))}
               </div>
-            </CardContent>
-          </Card>
+            </div>
 
-          {/* Timeline */}
-          <Card className="border border-gray-200">
-            <CardHeader>
-              <CardTitle className="text-lg font-bold text-gray-900">
-                Project Timeline
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4 text-gray-400" />
-                    <span className="text-sm text-gray-600">Start Date</span>
-                  </div>
-                  <span className="font-medium text-gray-900">
+            {/* Timeline Details */}
+            <div
+              className={cn(
+                "p-6 rounded-2xl border border-dashed",
+                isDark ? "border-zinc-800" : "border-zinc-200"
+              )}
+            >
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] font-bold uppercase text-muted-foreground">
+                    Launch
+                  </span>
+                  <span className="text-xs font-bold">
                     {formatDate(project.startDate)}
                   </span>
                 </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4 text-gray-400" />
-                    <span className="text-sm text-gray-600">End Date</span>
-                  </div>
-                  <span className="font-medium text-gray-900">
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] font-bold uppercase text-muted-foreground">
+                    Deadline
+                  </span>
+                  <span className="text-xs font-bold text-destructive">
                     {formatDate(project.endDate)}
                   </span>
                 </div>
-
-                <div className="pt-3 border-t border-gray-200">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Duration</span>
-                    <span className="font-medium text-gray-900">
-                      {Math.ceil(
-                        (new Date(project.endDate).getTime() -
-                          new Date(project.startDate).getTime()) /
-                          (1000 * 60 * 60 * 24)
-                      )}{" "}
-                      days
-                    </span>
-                  </div>
-                </div>
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Quick Actions */}
-          <Card className="border border-gray-200">
-            <CardHeader>
-              <CardTitle className="text-lg font-bold text-gray-900">
-                Quick Actions
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <Button className="w-full justify-start gap-2">
-                <TrendingUp className="w-4 h-4" />
-                Update Health Score
-              </Button>
-              <Button variant="outline" className="w-full justify-start gap-2">
-                <AlertTriangle className="w-4 h-4" />
-                Report Risk
-              </Button>
-              <Button variant="outline" className="w-full justify-start gap-2">
-                <FileText className="w-4 h-4" />
-                Generate Report
-              </Button>
-              <Button variant="outline" className="w-full justify-start gap-2">
-                <Shield className="w-4 h-4" />
-                Manage Team
-              </Button>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
       </div>
     </div>
