@@ -15,17 +15,28 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   ArrowLeft,
   Save,
-  X,
   Users,
-  Calendar,
+  Calendar as CalendarIcon,
   User,
-  Plus,
+  Shield,
+  Briefcase,
+  Loader2,
   AlertCircle,
 } from "lucide-react";
 import { toast } from "sonner";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
+import { useTheme } from "next-themes";
+import { motion } from "framer-motion";
 
 interface User {
   _id: string;
@@ -36,713 +47,434 @@ interface User {
 
 export default function CreateProjectPage() {
   const router = useRouter();
+  const { theme } = useTheme();
+  const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [clients, setClients] = useState<User[]>([]);
   const [employees, setEmployees] = useState<User[]>([]);
-  const [showAdvanced, setShowAdvanced] = useState(false);
 
-  // Form state
   const [formData, setFormData] = useState({
     name: "",
     description: "",
-    startDate: "",
-    endDate: "",
+    startDate: new Date(),
+    endDate: new Date(new Date().setDate(new Date().getDate() + 30)),
     client: "",
     employees: [] as string[],
   });
 
-  // Fetch users from database
-  // Fetch users from database
   useEffect(() => {
+    setMounted(true);
     const fetchUsers = async () => {
       try {
         setLoadingUsers(true);
-
-        // First, ensure demo data exists
-        const seedResponse = await fetch("/api/seed");
-        const seedData = await seedResponse.json();
-
-        if (seedData.success) {
-          console.log("Demo data created successfully");
-
-          // Use the user data from seed response
-          if (seedData.users) {
-            const clientUsers = seedData.users.filter(
-              (user: any) => user.role === "client"
+        const response = await fetch("/api/users");
+        if (response.ok) {
+          const usersData = await response.json();
+          if (usersData.success) {
+            const allUsers = usersData.users;
+            const dbClients = allUsers.filter((u: User) => u.role === "client");
+            const dbEmployees = allUsers.filter(
+              (u: User) => u.role === "employee"
             );
-            const employeeUsers = seedData.users.filter(
-              (user: any) => user.role === "employee"
-            );
+            setClients(dbClients);
+            setEmployees(dbEmployees);
 
-            // Get actual user IDs from database
-            const response = await fetch("/api/users");
-            if (response.ok) {
-              const usersData = await response.json();
-              if (usersData.success) {
-                const allUsers = usersData.users;
-                const dbClientUsers = allUsers.filter(
-                  (user: User) => user.role === "client"
-                );
-                const dbEmployeeUsers = allUsers.filter(
-                  (user: User) => user.role === "employee"
-                );
-
-                setClients(dbClientUsers);
-                setEmployees(dbEmployeeUsers);
-
-                if (dbClientUsers.length > 0) {
-                  setFormData((prev) => ({
-                    ...prev,
-                    client: dbClientUsers[0]._id,
-                  }));
-                }
-                if (dbEmployeeUsers.length > 0) {
-                  setFormData((prev) => ({
-                    ...prev,
-                    employees: [dbEmployeeUsers[0]._id],
-                  }));
-                }
-              }
-            } else {
-              // Fallback to seed data user info
-              toast.info("Using seed data for user selection");
-
-              // Create mock user objects from seed data
-              const mockClients = clientUsers.map((user: any) => ({
-                _id:
-                  user.email === "sarah@clientco.com"
-                    ? "694d085b7f2a938c295843d7"
-                    : "client-demo-id",
-                name: user.role === "client" ? "Sarah Client" : "Demo Client",
-                email: user.email,
-                role: user.role,
-              }));
-
-              const mockEmployees = employeeUsers.map((user: any) => ({
-                _id:
-                  user.email === "john@projectpulse.com"
-                    ? "694d085b7f2a938c295843d5"
-                    : "employee-demo-id",
-                name:
-                  user.role === "employee" ? "John Developer" : "Demo Employee",
-                email: user.email,
-                role: user.role,
-              }));
-
-              setClients(mockClients);
-              setEmployees(mockEmployees);
-
-              if (mockClients.length > 0) {
-                setFormData((prev) => ({
-                  ...prev,
-                  client: mockClients[0]._id,
-                }));
-              }
-              if (mockEmployees.length > 0) {
-                setFormData((prev) => ({
-                  ...prev,
-                  employees: [mockEmployees[0]._id],
-                }));
-              }
-            }
+            if (dbClients.length > 0)
+              setFormData((p) => ({ ...p, client: dbClients[0]._id }));
+            if (dbEmployees.length > 0)
+              setFormData((p) => ({ ...p, employees: [dbEmployees[0]._id] }));
           }
         }
       } catch (error) {
-        console.error("Error fetching users:", error);
-        toast.error("Failed to load users. Using hardcoded demo data.");
-
-        // Hardcoded fallback
-        setClients([
-          {
-            _id: "694d085b7f2a938c295843d7",
-            name: "Sarah Client",
-            email: "sarah@clientco.com",
-            role: "client",
-          },
-        ]);
-        setEmployees([
-          {
-            _id: "694d085b7f2a938c295843d5",
-            name: "John Developer",
-            email: "john@projectpulse.com",
-            role: "employee",
-          },
-        ]);
-
-        setFormData((prev) => ({
-          ...prev,
-          client: "694d085b7f2a938c295843d7",
-          employees: ["694d085b7f2a938c295843d5"],
-        }));
+        toast.error("Failed to load system users");
       } finally {
         setLoadingUsers(false);
       }
     };
-
-    // Set default dates
-    const today = new Date();
-    const nextMonth = new Date(today);
-    nextMonth.setDate(today.getDate() + 30);
-
-    setFormData((prev) => ({
-      ...prev,
-      startDate: today.toISOString().split("T")[0],
-      endDate: nextMonth.toISOString().split("T")[0],
-    }));
-
     fetchUsers();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    // Validation as per requirements
-    if (!formData.name.trim()) {
-      toast.error("Project name is required");
+    if (!formData.name.trim() || !formData.description.trim()) {
+      toast.error("Required fields missing");
       return;
     }
-
-    if (!formData.description.trim()) {
-      toast.error("Project description is required");
-      return;
-    }
-
-    if (!formData.startDate || !formData.endDate) {
-      toast.error("Start date and end date are required");
-      return;
-    }
-
-    const startDate = new Date(formData.startDate);
-    const endDate = new Date(formData.endDate);
-
-    if (endDate <= startDate) {
-      toast.error("End date must be after start date");
-      return;
-    }
-
-    if (!formData.client) {
-      toast.error("Please select a client");
-      return;
-    }
-
-    if (formData.employees.length === 0) {
-      toast.error("Please select at least one team member");
-      return;
-    }
-
     try {
       setLoading(true);
-
-      const payload = {
-        name: formData.name.trim(),
-        description: formData.description.trim(),
-        startDate: formData.startDate,
-        endDate: formData.endDate,
-        client: formData.client,
-        employees: formData.employees,
-      };
-
-      console.log("Creating project with:", payload);
-
-      const response = await fetch("/api/projects", {
+      const res = await fetch("/api/projects", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...formData,
+          status: "on_track",
+          healthScore: 100,
+        }),
       });
-
-      const data = await response.json();
-
+      const data = await res.json();
       if (data.success) {
-        toast.success("Project created successfully!");
+        toast.success("Project Initiated");
         router.push(`/projects/${data.project._id}`);
         router.refresh();
-      } else {
-        toast.error(data.error || "Failed to create project");
       }
     } catch (error) {
-      console.error("Error creating project:", error);
-      toast.error("Failed to create project");
+      toast.error("Submission failed");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
+  if (!mounted) return null;
 
-  const handleClientChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setFormData((prev) => ({ ...prev, client: e.target.value }));
-  };
-
-  const handleEmployeeToggle = (employeeId: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      employees: prev.employees.includes(employeeId)
-        ? prev.employees.filter((id) => id !== employeeId)
-        : [...prev.employees, employeeId],
-    }));
-  };
-
-  const selectAllEmployees = () => {
-    setFormData((prev) => ({
-      ...prev,
-      employees: employees.map((emp) => emp._id),
-    }));
-  };
-
-  const clearAllEmployees = () => {
-    setFormData((prev) => ({
-      ...prev,
-      employees: [],
-    }));
-  };
+  const isDark = theme === "dark";
 
   if (loadingUsers) {
     return (
-      <div className="p-6">
-        <div className="mb-6">
-          <Link href="/projects">
-            <Button variant="outline" className="gap-2 mb-4">
-              <ArrowLeft className="w-4 h-4" />
-              Back to Projects
-            </Button>
-          </Link>
-        </div>
-        <div className="text-center py-12">
-          <div className="w-16 h-16 border-4 border-gray-300 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
-          <h2 className="text-xl font-bold text-gray-900">Loading Users...</h2>
-          <p className="text-gray-600 mt-2">
-            Please wait while we load users from the database
-          </p>
-        </div>
+      <div
+        className={cn(
+          "min-h-screen flex flex-col items-center justify-center",
+          isDark ? "bg-black" : "bg-white"
+        )}
+      >
+        <Loader2 className="w-8 h-8 animate-spin text-destructive mb-4" />
+        <p className="text-muted-foreground font-bold tracking-tighter uppercase text-[10px]">
+          Syncing Database...
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="p-6">
-      {/* Header */}
-      <div className="mb-6">
-        <Link href="/projects">
-          <Button variant="outline" className="gap-2 mb-4">
-            <ArrowLeft className="w-4 h-4" />
-            Back to Projects
-          </Button>
-        </Link>
-        <h1 className="text-3xl font-bold text-gray-900">Create New Project</h1>
-        <p className="text-gray-600 mt-2">
-          Create a new project and assign team members. All fields are required.
-        </p>
-      </div>
+    <div
+      className={cn(
+        "min-h-screen transition-colors duration-300",
+        isDark ? "bg-black text-white" : "bg-white text-black"
+      )}
+    >
+      <div className="max-w-6xl mx-auto p-6 md:p-10 space-y-8">
+        {/* Header - Dashboard Pulse Style */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+          >
+            <Link href="/projects">
+              <Button
+                variant="ghost"
+                className="pl-0 hover:bg-transparent text-destructive font-bold gap-2 text-xs uppercase tracking-widest mb-2"
+              >
+                <ArrowLeft className="w-4 h-4" /> Back to Dashboard
+              </Button>
+            </Link>
+            <h1 className="text-4xl font-bold tracking-tight">
+              Create{" "}
+              <span className="text-destructive font-extrabold">Project</span>
+            </h1>
+            <p className="text-muted-foreground mt-2 max-w-lg">
+              Initialize a new operational project into the system pulse.
+            </p>
+          </motion.div>
 
-      {/* Alert if no users */}
-      {clients.length === 0 || employees.length === 0 ? (
-        <Card className="mb-6 border-yellow-200 bg-yellow-50">
-          <CardContent className="p-6">
-            <div className="flex items-start gap-3">
-              <AlertCircle className="w-6 h-6 text-yellow-600 mt-0.5" />
-              <div>
-                <h3 className="font-bold text-yellow-800">Setup Required</h3>
-                <p className="text-yellow-700 mt-1">
-                  {clients.length === 0 && employees.length === 0
-                    ? "No users found in the system. Please create users first."
-                    : clients.length === 0
-                    ? "No clients found. Please create at least one client user."
-                    : "No employees found. Please create at least one employee user."}
-                </p>
-                <div className="mt-3">
-                  <Link href="/api/seed">
-                    <Button variant="outline" className="gap-2">
-                      <Plus className="w-4 h-4" />
-                      Create Demo Users
-                    </Button>
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      ) : null}
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column - Form */}
-        <div className="lg:col-span-2">
-          <Card className="border border-gray-200">
-            <CardHeader>
-              <CardTitle className="text-xl font-bold text-gray-900">
-                Project Information
-              </CardTitle>
-              <CardDescription className="text-gray-600">
-                Fill in project details and assign team members
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Project Name */}
-                <div className="space-y-2">
-                  <Label htmlFor="name" className="text-gray-700">
-                    Project Name *
-                  </Label>
-                  <Input
-                    id="name"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleInputChange}
-                    placeholder="Enter project name"
-                    required
-                    className="border-gray-300"
-                  />
-                </div>
-
-                {/* Description */}
-                <div className="space-y-2">
-                  <Label htmlFor="description" className="text-gray-700">
-                    Description *
-                  </Label>
-                  <Textarea
-                    id="description"
-                    name="description"
-                    value={formData.description}
-                    onChange={handleInputChange}
-                    placeholder="Describe the project goals, objectives, and deliverables"
-                    rows={4}
-                    required
-                    className="border-gray-300 resize-none"
-                  />
-                </div>
-
-                {/* Timeline */}
-                <div className="space-y-4">
-                  <h3 className="font-medium text-gray-900 flex items-center gap-2">
-                    <Calendar className="w-4 h-4" />
-                    Project Timeline *
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="startDate" className="text-gray-700">
-                        Start Date
-                      </Label>
-                      <Input
-                        id="startDate"
-                        name="startDate"
-                        type="date"
-                        value={formData.startDate}
-                        onChange={handleInputChange}
-                        required
-                        className="border-gray-300"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="endDate" className="text-gray-700">
-                        End Date
-                      </Label>
-                      <Input
-                        id="endDate"
-                        name="endDate"
-                        type="date"
-                        value={formData.endDate}
-                        onChange={handleInputChange}
-                        required
-                        className="border-gray-300"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Client Assignment */}
-                <div className="space-y-4">
-                  <h3 className="font-medium text-gray-900 flex items-center gap-2">
-                    <User className="w-4 h-4" />
-                    Assign Client *
-                  </h3>
-                  <div className="border border-gray-300 rounded-lg p-4">
-                    {clients.length === 0 ? (
-                      <div className="text-center py-4 text-gray-500">
-                        No clients available. Please create client users first.
-                      </div>
-                    ) : (
-                      <>
-                        <select
-                          value={formData.client}
-                          onChange={handleClientChange}
-                          className="w-full p-2 border border-gray-300 rounded-md bg-white"
-                          required
-                        >
-                          <option value="">-- Select a Client --</option>
-                          {clients.map((client) => (
-                            <option key={client._id} value={client._id}>
-                              {client.name} ({client.email})
-                            </option>
-                          ))}
-                        </select>
-
-                        {formData.client && (
-                          <div className="mt-3 p-3 bg-blue-50 rounded-md">
-                            <p className="text-sm font-medium text-blue-800">
-                              Selected Client:{" "}
-                              {
-                                clients.find((c) => c._id === formData.client)
-                                  ?.name
-                              }
-                            </p>
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </div>
-                </div>
-
-                {/* Team Assignment */}
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-medium text-gray-900 flex items-center gap-2">
-                      <Users className="w-4 h-4" />
-                      Assign Team Members *
-                    </h3>
-                    <div className="flex gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={selectAllEmployees}
-                      >
-                        Select All
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={clearAllEmployees}
-                      >
-                        Clear All
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div className="border border-gray-300 rounded-lg p-4">
-                    {employees.length === 0 ? (
-                      <div className="text-center py-4 text-gray-500">
-                        No employees available. Please create employee users
-                        first.
-                      </div>
-                    ) : (
-                      <>
-                        <div className="space-y-2 max-h-60 overflow-y-auto">
-                          {employees.map((employee) => (
-                            <div
-                              key={employee._id}
-                              className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50"
-                            >
-                              <Checkbox
-                                id={`employee-${employee._id}`}
-                                checked={formData.employees.includes(
-                                  employee._id
-                                )}
-                                onCheckedChange={() =>
-                                  handleEmployeeToggle(employee._id)
-                                }
-                              />
-                              <div className="flex-1">
-                                <label
-                                  htmlFor={`employee-${employee._id}`}
-                                  className="font-medium text-gray-900 cursor-pointer"
-                                >
-                                  {employee.name}
-                                </label>
-                                <p className="text-sm text-gray-500">
-                                  {employee.email}
-                                </p>
-                              </div>
-                              <span className="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded">
-                                Employee
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-
-                        {formData.employees.length > 0 && (
-                          <div className="mt-4 p-3 bg-green-50 rounded-md">
-                            <p className="text-sm font-medium text-green-800">
-                              Selected: {formData.employees.length} team
-                              member(s)
-                            </p>
-                            <p className="text-sm text-green-700 mt-1">
-                              {employees
-                                .filter((emp) =>
-                                  formData.employees.includes(emp._id)
-                                )
-                                .map((emp) => emp.name)
-                                .join(", ")}
-                            </p>
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </div>
-                </div>
-
-                {/* Form Actions */}
-                <div className="flex gap-3 pt-4 border-t border-gray-200">
-                  <Link href="/projects" className="flex-1">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="w-full gap-2"
-                      disabled={loading}
-                    >
-                      <X className="w-4 h-4" />
-                      Cancel
-                    </Button>
-                  </Link>
-                  <Button
-                    type="submit"
-                    className="flex-1 gap-2"
-                    disabled={
-                      loading || clients.length === 0 || employees.length === 0
-                    }
-                  >
-                    <Save className="w-4 h-4" />
-                    {loading ? "Creating..." : "Create Project"}
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
+          <div
+            className={cn(
+              "px-4 py-1.5 rounded-full border text-[10px] font-bold uppercase tracking-widest",
+              isDark
+                ? "bg-destructive/10 text-destructive border-destructive/30"
+                : "bg-destructive/5 text-destructive border-destructive/20"
+            )}
+          >
+            <Shield className="w-3 h-3 inline mr-2 mb-0.5" /> Project Protocol
+            v1.0
+          </div>
         </div>
 
-        {/* Right Column - Information */}
-        <div className="space-y-6">
-          {/* Requirements Summary */}
-          <Card className="border border-gray-200">
-            <CardHeader>
-              <CardTitle className="text-lg font-bold text-gray-900">
-                📋 Project Requirements
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="space-y-2">
-                <h4 className="font-medium text-gray-900">Required Fields</h4>
-                <ul className="text-sm text-gray-600 space-y-1">
-                  <li className="flex items-start gap-2">
-                    <div className="w-1.5 h-1.5 bg-red-500 rounded-full mt-1.5"></div>
-                    <span>Project Name - Clear and descriptive</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <div className="w-1.5 h-1.5 bg-red-500 rounded-full mt-1.5"></div>
-                    <span>Description - Project scope and objectives</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <div className="w-1.5 h-1.5 bg-red-500 rounded-full mt-1.5"></div>
-                    <span>Timeline - Start and end dates</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <div className="w-1.5 h-1.5 bg-red-500 rounded-full mt-1.5"></div>
-                    <span>Client - One client per project</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <div className="w-1.5 h-1.5 bg-red-500 rounded-full mt-1.5"></div>
-                    <span>Team - At least one employee</span>
-                  </li>
-                </ul>
-              </div>
-            </CardContent>
-          </Card>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2 space-y-6">
+            <Card
+              className={cn(
+                "rounded-2xl border transition-all duration-200 shadow-none",
+                isDark
+                  ? "bg-zinc-900/50 border-zinc-800"
+                  : "bg-zinc-50 border-zinc-200"
+              )}
+            >
+              <CardHeader className="p-8 pb-4">
+                <CardTitle className="text-xl font-bold flex items-center gap-3">
+                  <Briefcase className="w-5 h-5 text-destructive" />
+                  General Information
+                </CardTitle>
+              </CardHeader>
 
-          {/* What Happens Next */}
-          <Card className="border border-gray-200">
-            <CardHeader>
-              <CardTitle className="text-lg font-bold text-gray-900">
-                🚀 What Happens After Creation
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <ul className="text-sm text-gray-600 space-y-2">
-                <li className="flex items-start gap-2">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full mt-1.5"></div>
-                  <span>Initial Health Score: 100% (On Track)</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full mt-1.5"></div>
-                  <span>Weekly check-ins will be scheduled</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full mt-1.5"></div>
-                  <span>Client feedback system activated</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full mt-1.5"></div>
-                  <span>Risk tracking enabled</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full mt-1.5"></div>
-                  <span>Activity timeline created</span>
-                </li>
-              </ul>
-            </CardContent>
-          </Card>
+              <CardContent className="p-8 pt-4 space-y-6">
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-tighter">
+                      Project Identity *
+                    </Label>
+                    <Input
+                      placeholder="Operational Name"
+                      className={cn(
+                        "h-12 rounded-xl focus-visible:ring-destructive",
+                        isDark
+                          ? "bg-black border-zinc-800"
+                          : "bg-white border-zinc-200"
+                      )}
+                      value={formData.name}
+                      onChange={(e) =>
+                        setFormData({ ...formData, name: e.target.value })
+                      }
+                    />
+                  </div>
 
-          {/* System Status */}
-          <Card className="border border-gray-200">
-            <CardHeader>
-              <CardTitle className="text-lg font-bold text-gray-900">
-                ⚙️ System Status
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">
-                    Available Clients
-                  </span>
-                  <span
-                    className={`font-medium ${
-                      clients.length > 0 ? "text-green-600" : "text-red-600"
-                    }`}
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-tighter">
+                      Mission Briefing *
+                    </Label>
+                    <Textarea
+                      placeholder="Scope of work..."
+                      className={cn(
+                        "rounded-xl focus-visible:ring-destructive min-h-[120px]",
+                        isDark
+                          ? "bg-black border-zinc-800"
+                          : "bg-white border-zinc-200"
+                      )}
+                      value={formData.description}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          description: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2 flex flex-col">
+                      <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-tighter">
+                        Start Cycle
+                      </Label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "h-12 rounded-xl justify-start text-left font-semibold",
+                              isDark
+                                ? "bg-black border-zinc-800 hover:bg-zinc-900"
+                                : "bg-white border-zinc-200 hover:bg-zinc-50"
+                            )}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4 text-destructive" />
+                            {formData.startDate
+                              ? format(formData.startDate, "PPP")
+                              : "Select Date"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0 border-zinc-800 bg-zinc-950">
+                          <Calendar
+                            mode="single"
+                            selected={formData.startDate}
+                            onSelect={(d) =>
+                              d && setFormData({ ...formData, startDate: d })
+                            }
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+
+                    <div className="space-y-2 flex flex-col">
+                      <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-tighter">
+                        Target Completion
+                      </Label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "h-12 rounded-xl justify-start text-left font-semibold",
+                              isDark
+                                ? "bg-black border-zinc-800 hover:bg-zinc-900"
+                                : "bg-white border-zinc-200 hover:bg-zinc-50"
+                            )}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4 text-destructive" />
+                            {formData.endDate
+                              ? format(formData.endDate, "PPP")
+                              : "Select Date"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0 border-zinc-800 bg-zinc-950">
+                          <Calendar
+                            mode="single"
+                            selected={formData.endDate}
+                            onSelect={(d) =>
+                              d && setFormData({ ...formData, endDate: d })
+                            }
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-tighter">
+                      Assign Client *
+                    </Label>
+                    <select
+                      className={cn(
+                        "w-full h-12 px-4 rounded-xl border font-bold text-sm focus:ring-1 focus:ring-destructive outline-none",
+                        isDark
+                          ? "bg-black border-zinc-800"
+                          : "bg-white border-zinc-200"
+                      )}
+                      value={formData.client}
+                      onChange={(e) =>
+                        setFormData({ ...formData, client: e.target.value })
+                      }
+                    >
+                      {clients.map((c) => (
+                        <option key={c._id} value={c._id}>
+                          {c.name} — {c.email}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-4">
+                    <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-tighter flex items-center gap-2">
+                      <Users className="w-3 h-3" /> Squad Assignment
+                    </Label>
+                    <div
+                      className={cn(
+                        "border rounded-xl p-4 space-y-2 max-h-60 overflow-y-auto",
+                        isDark
+                          ? "bg-black/50 border-zinc-800"
+                          : "bg-white border-zinc-200"
+                      )}
+                    >
+                      {employees.map((emp) => (
+                        <div
+                          key={emp._id}
+                          className="flex items-center gap-3 p-2 rounded-lg hover:bg-destructive/5 group transition-colors"
+                        >
+                          <Checkbox
+                            id={emp._id}
+                            checked={formData.employees.includes(emp._id)}
+                            onCheckedChange={() => {
+                              const exists = formData.employees.includes(
+                                emp._id
+                              );
+                              setFormData({
+                                ...formData,
+                                employees: exists
+                                  ? formData.employees.filter(
+                                      (id) => id !== emp._id
+                                    )
+                                  : [...formData.employees, emp._id],
+                              });
+                            }}
+                            className="border-zinc-700 data-[state=checked]:bg-destructive data-[state=checked]:border-destructive"
+                          />
+                          <label
+                            htmlFor={emp._id}
+                            className="flex-1 cursor-pointer"
+                          >
+                            <p className="font-bold text-sm group-hover:text-destructive transition-colors">
+                              {emp.name}
+                            </p>
+                            <p className="text-[10px] text-muted-foreground uppercase">
+                              {emp.email}
+                            </p>
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <Button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full h-12 rounded-xl bg-destructive hover:bg-destructive/90 text-white font-bold uppercase tracking-widest transition-all"
                   >
-                    {clients.length}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">
-                    Available Employees
-                  </span>
-                  <span
-                    className={`font-medium ${
-                      employees.length > 0 ? "text-green-600" : "text-red-600"
-                    }`}
-                  >
-                    {employees.length}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Database</span>
-                  <span className="font-medium text-green-600">Connected</span>
-                </div>
-              </div>
+                    {loading ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4 mr-2" /> Initialize Project
+                      </>
+                    )}
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+          </div>
 
-              {clients.length === 0 || employees.length === 0 ? (
-                <div className="mt-4 p-3 bg-yellow-50 rounded-md">
-                  <p className="text-sm text-yellow-800">
-                    ❗ Create users before creating projects
-                  </p>
-                  <Link href="/api/seed" className="inline-block mt-2">
-                    <Button variant="outline" size="sm" className="gap-2">
-                      <Plus className="w-3 h-3" />
-                      Create Demo Users
-                    </Button>
-                  </Link>
-                </div>
-              ) : null}
-            </CardContent>
-          </Card>
+          <div className="space-y-6">
+            <Card
+              className={cn(
+                "rounded-2xl border border-destructive/20 overflow-hidden",
+                isDark ? "bg-destructive/10" : "bg-destructive/5"
+              )}
+            >
+              <CardHeader className="pb-2">
+                <CardTitle className="text-xs font-bold flex items-center gap-2 text-destructive uppercase tracking-widest">
+                  <AlertCircle className="w-4 h-4" /> System Note
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-xs font-medium leading-relaxed text-muted-foreground">
+                  Upon initiation, this project will be indexed into the
+                  Dashboard Pulse. Real-time health metrics and risk analysis
+                  will begin immediately.
+                </p>
+              </CardContent>
+            </Card>
+
+            <div
+              className={cn(
+                "p-6 rounded-2xl border",
+                isDark
+                  ? "bg-zinc-900/50 border-zinc-800"
+                  : "bg-zinc-50 border-zinc-200"
+              )}
+            >
+              <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-4">
+                Readiness
+              </h3>
+              <div className="space-y-3">
+                {[
+                  { label: "Identity Verified", ok: formData.name.length > 2 },
+                  {
+                    label: "Squad Assigned",
+                    ok: formData.employees.length > 0,
+                  },
+                  { label: "Client Linked", ok: !!formData.client },
+                ].map((item, i) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <div
+                      className={cn(
+                        "w-1.5 h-1.5 rounded-full",
+                        item.ok
+                          ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]"
+                          : "bg-zinc-700"
+                      )}
+                    />
+                    <span
+                      className={cn(
+                        "text-[10px] font-bold uppercase tracking-tight",
+                        item.ok ? "text-foreground" : "text-muted-foreground"
+                      )}
+                    >
+                      {item.label}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
