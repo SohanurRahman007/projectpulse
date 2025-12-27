@@ -7,19 +7,21 @@ import {
   AlertTriangle,
   CheckCircle,
   Users,
-  BarChart,
   RefreshCw,
-  Calendar,
-  MessageSquare,
   Clock,
+  Shield,
+  TrendingUp,
 } from "lucide-react";
 import Link from "next/link";
 import { DashboardStats, Activity } from "@/types";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { useTheme } from "next-themes";
 
 export default function AdminDashboard() {
+  const { theme } = useTheme();
+  const [mounted, setMounted] = useState(false);
   const [stats, setStats] = useState<DashboardStats>({
     totalProjects: 0,
     activeProjects: 0,
@@ -32,6 +34,7 @@ export default function AdminDashboard() {
   const [activitiesLoading, setActivitiesLoading] = useState(true);
 
   useEffect(() => {
+    setMounted(true);
     fetchDashboardData();
     fetchActivities();
   }, []);
@@ -40,10 +43,8 @@ export default function AdminDashboard() {
     try {
       const response = await fetch("/api/projects");
       const data = await response.json();
-
       if (data.success) {
         const projects = data.projects || [];
-
         const active = projects.filter(
           (p: any) => p.status !== "completed"
         ).length;
@@ -59,7 +60,6 @@ export default function AdminDashboard() {
                 ) / projects.length
               )
             : 0;
-
         setStats({
           totalProjects: projects.length,
           activeProjects: active,
@@ -68,7 +68,6 @@ export default function AdminDashboard() {
         });
       }
     } catch (error) {
-      console.error("Failed to fetch dashboard data:", error);
       toast.error("Failed to load dashboard data");
     } finally {
       setLoading(false);
@@ -80,315 +79,205 @@ export default function AdminDashboard() {
       setActivitiesLoading(true);
       const response = await fetch("/api/activity?limit=10");
       const data = await response.json();
-
-      if (data.success) {
-        setActivities(data.activities || []);
-      } else {
-        toast.error("Failed to load activities");
-      }
+      if (data.success) setActivities(data.activities || []);
     } catch (error) {
-      console.error("Failed to fetch activities:", error);
       toast.error("Failed to load activities");
     } finally {
       setActivitiesLoading(false);
     }
   };
 
-  const refreshAll = () => {
-    setLoading(true);
-    setActivitiesLoading(true);
-    fetchDashboardData();
-    fetchActivities();
-    toast.success("Dashboard refreshed");
-  };
-
-  const getActivityIcon = (type: string) => {
-    switch (type) {
-      case "checkin":
-        return <Calendar className="w-4 h-4 text-blue-600" />;
-      case "feedback":
-        return <MessageSquare className="w-4 h-4 text-purple-600" />;
-      case "risk":
-        return <AlertTriangle className="w-4 h-4 text-red-600" />;
-      case "health_updated":
-        return <BarChart className="w-4 h-4 text-emerald-600" />;
-      default:
-        return <Clock className="w-4 h-4 text-gray-500" />;
-    }
-  };
-
-  const formatTimeAgo = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffInHours = Math.floor(
-      (now.getTime() - date.getTime()) / (1000 * 60 * 60)
-    );
-
-    if (diffInHours < 1) {
-      return "Just now";
-    } else if (diffInHours < 24) {
-      return `${diffInHours}h ago`;
-    } else if (diffInHours < 168) {
-      return `${Math.floor(diffInHours / 24)}d ago`;
-    } else {
-      return format(date, "MMM dd");
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="p-6">
-        <div className="h-8 w-64 bg-gray-200 rounded animate-pulse mb-6"></div>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          {[1, 2, 3, 4].map((i) => (
-            <div
-              key={i}
-              className="h-32 bg-gray-200 rounded animate-pulse"
-            ></div>
-          ))}
-        </div>
-      </div>
-    );
-  }
+  if (!mounted) return null;
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-800">
-            Overview
-          </h1>
-          <p className="text-gray-600 mt-2">
-            Monitor project health and manage teams effectively
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-3">
-          <Button
-            variant="outline"
-            className="gap-2"
-            onClick={refreshAll}
-            disabled={loading || activitiesLoading}
+    // Background logic: Pure Black for Dark, Pure White for Light
+    <div
+      className={`min-h-screen transition-colors duration-300 ${
+        theme === "dark" ? "bg-black text-white" : "bg-white text-black"
+      }`}
+    >
+      <div className="max-w-7xl mx-auto space-y-8 p-6 md:p-10 relative">
+        {/* Header Section */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
           >
-            <RefreshCw
-              className={`w-4 h-4 ${
-                loading || activitiesLoading ? "animate-spin" : ""
+            <div
+              className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium mb-4 border ${
+                theme === "dark"
+                  ? "bg-destructive/10 text-destructive border-destructive/30"
+                  : "bg-destructive/5 text-destructive border-destructive/20"
               }`}
-            />
-            Refresh
-          </Button>
-          <Link href="/projects">
-            <Button className="gap-2">
-              <BarChart className="w-4 h-4" />
-              View All Projects
-            </Button>
-          </Link>
-        </div>
-      </div>
-
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {/* Total Projects */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-        >
-          <div className="bg-white p-6 rounded-xl shadow-sm border">
-            <div className="flex justify-between items-start mb-4">
-              <div>
-                <p className="text-sm text-gray-500">Total Projects</p>
-                <h3 className="text-3xl font-bold mt-2">
-                  {stats.totalProjects}
-                </h3>
-              </div>
-              <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center">
-                <Users className="w-6 h-6 text-blue-600" />
-              </div>
+            >
+              <Shield className="w-3.5 h-3.5" />
+              <span>Admin Control Center</span>
             </div>
-            <p className="text-sm text-gray-500">Across all clients</p>
-          </div>
-        </motion.div>
+            <h1 className="text-4xl font-bold tracking-tight">
+              Dashboard{" "}
+              <span className="text-destructive font-extrabold">Pulse</span>
+            </h1>
+            <p className="text-muted-foreground mt-2 max-w-lg">
+              Monitor project health and system-wide risks in real-time.
+            </p>
+          </motion.div>
 
-        {/* Active Projects */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-        >
-          <div className="bg-white p-6 rounded-xl shadow-sm border">
-            <div className="flex justify-between items-start mb-4">
-              <div>
-                <p className="text-sm text-gray-500">Active Projects</p>
-                <h3 className="text-3xl font-bold mt-2">
-                  {stats.activeProjects}
-                </h3>
-              </div>
-              <div className="w-12 h-12 bg-emerald-50 rounded-full flex items-center justify-center">
-                <CheckCircle className="w-6 h-6 text-emerald-600" />
-              </div>
-            </div>
-            <p className="text-sm text-gray-500">Currently in progress</p>
-          </div>
-        </motion.div>
-
-        {/* At Risk Projects */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-        >
-          <div className="bg-white p-6 rounded-xl shadow-sm border">
-            <div className="flex justify-between items-start mb-4">
-              <div>
-                <p className="text-sm text-gray-500">At Risk</p>
-                <h3 className="text-3xl font-bold mt-2">
-                  {stats.atRiskProjects}
-                </h3>
-              </div>
-              <div className="w-12 h-12 bg-red-50 rounded-full flex items-center justify-center">
-                <AlertTriangle className="w-6 h-6 text-red-600" />
-              </div>
-            </div>
-            <p className="text-sm text-gray-500">Need immediate attention</p>
-          </div>
-        </motion.div>
-
-        {/* Avg Health Score */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-        >
-          <div className="bg-white p-6 rounded-xl shadow-sm border">
-            <div className="flex justify-between items-start mb-4">
-              <div>
-                <p className="text-sm text-gray-500">Avg Health Score</p>
-                <h3
-                  className={`text-3xl font-bold mt-2 ${
-                    stats.avgHealthScore >= 80
-                      ? "text-emerald-600"
-                      : stats.avgHealthScore >= 60
-                      ? "text-amber-600"
-                      : "text-red-600"
-                  }`}
-                >
-                  {stats.avgHealthScore}%
-                </h3>
-              </div>
-              <div className="w-12 h-12 bg-purple-50 rounded-full flex items-center justify-center">
-                <ArrowUpRight className="w-6 h-6 text-purple-600" />
-              </div>
-            </div>
-            <p className="text-sm text-gray-500">Overall project health</p>
-          </div>
-        </motion.div>
-      </div>
-
-      {/* Recent Activity */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.5 }}
-        className="bg-white rounded-xl shadow-sm border"
-      >
-        <div className="p-6 border-b">
-          <div className="flex justify-between items-center">
-            <div>
-              <h2 className="text-xl font-bold text-gray-800">
-                Recent Activity
-              </h2>
-              <p className="text-sm text-gray-600 mt-1">
-                Latest updates from your projects
-              </p>
-            </div>
+          <div className="flex gap-3">
             <Button
-              variant="ghost"
-              size="sm"
-              onClick={fetchActivities}
-              disabled={activitiesLoading}
+              variant="outline"
+              onClick={() => {
+                fetchDashboardData();
+                fetchActivities();
+                toast.success("Refreshed");
+              }}
+              className={`gap-2 ${
+                theme === "dark"
+                  ? "border-white/10 hover:bg-white/5"
+                  : "border-black/10 hover:bg-black/5"
+              }`}
             >
               <RefreshCw
-                className={`w-4 h-4 ${activitiesLoading ? "animate-spin" : ""}`}
+                className={`w-4 h-4 ${loading ? "animate-spin" : ""}`}
               />
+              Sync
             </Button>
+            <Link href="/projects">
+              <Button className="bg-destructive hover:bg-destructive/90 text-white gap-2">
+                <AlertTriangle className="w-4 h-4" />
+                Manage Risks
+              </Button>
+            </Link>
           </div>
         </div>
-        <div className="p-6">
-          {activitiesLoading ? (
-            <div className="space-y-4">
-              {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="flex items-center gap-4 p-3">
-                  <div className="w-10 h-10 rounded-full bg-gray-200 animate-pulse"></div>
-                  <div className="flex-1 space-y-2">
-                    <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4"></div>
-                    <div className="h-3 bg-gray-200 rounded animate-pulse w-1/2"></div>
+
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[
+            {
+              label: "Total Projects",
+              value: stats.totalProjects,
+              icon: Users,
+              color: "text-primary",
+              bg: theme === "dark" ? "bg-white/5" : "bg-black/5",
+            },
+            {
+              label: "Active Status",
+              value: stats.activeProjects,
+              icon: CheckCircle,
+              color: "text-blue-500",
+              bg: theme === "dark" ? "bg-blue-500/10" : "bg-blue-500/5",
+            },
+            {
+              label: "At Risk",
+              value: stats.atRiskProjects,
+              icon: AlertTriangle,
+              color: "text-destructive",
+              bg: "bg-destructive/10",
+              alert: true,
+            },
+            {
+              label: "Avg Health",
+              value: `${stats.avgHealthScore}%`,
+              icon: TrendingUp,
+              color: "text-emerald-500",
+              bg: theme === "dark" ? "bg-emerald-500/10" : "bg-emerald-500/5",
+            },
+          ].map((item, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.1 }}
+              className={`p-6 rounded-xl border transition-all duration-200 ${
+                theme === "dark"
+                  ? "bg-zinc-900/50 border-zinc-800 hover:border-destructive/50"
+                  : "bg-zinc-50 border-zinc-200 hover:border-destructive/30"
+              }`}
+            >
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-tighter">
+                    {item.label}
+                  </p>
+                  <h3
+                    className={`text-3xl font-bold mt-2 ${
+                      item.alert ? "text-destructive" : ""
+                    }`}
+                  >
+                    {item.value}
+                  </h3>
+                </div>
+                <div
+                  className={`w-12 h-12 rounded-lg flex items-center justify-center ${item.bg}`}
+                >
+                  <item.icon className={`w-6 h-6 ${item.color}`} />
+                </div>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+
+        {/* Recent Activity Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className={`rounded-2xl border ${
+            theme === "dark"
+              ? "bg-zinc-950 border-zinc-800"
+              : "bg-white border-zinc-200"
+          }`}
+        >
+          <div className="p-6 border-b border-zinc-800/50 flex items-center justify-between">
+            <h2 className="text-xl font-bold flex items-center gap-3">
+              <div className="w-2 h-2 rounded-full bg-destructive animate-pulse"></div>
+              Recent Activity
+            </h2>
+            <div className="text-[10px] font-bold text-muted-foreground uppercase">
+              Live Update
+            </div>
+          </div>
+
+          <div className="p-6 space-y-6">
+            {activities.length > 0 ? (
+              activities.slice(0, 5).map((activity, index) => (
+                <div key={index} className="flex gap-4 items-start group">
+                  <div
+                    className={`w-10 h-10 rounded-full flex items-center justify-center border shrink-0 ${
+                      activity.type === "risk"
+                        ? "bg-destructive/10 border-destructive/20"
+                        : "bg-zinc-800/20 border-zinc-800"
+                    }`}
+                  >
+                    {activity.type === "risk" ? (
+                      <AlertTriangle className="w-4 h-4 text-destructive" />
+                    ) : (
+                      <Clock className="w-4 h-4 text-muted-foreground" />
+                    )}
+                  </div>
+                  <div className="flex-1 border-b border-zinc-800/30 pb-4 last:border-0">
+                    <p
+                      className={`font-semibold group-hover:text-destructive transition-colors`}
+                    >
+                      {activity.title}
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {activity.description}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground mt-2 uppercase">
+                      {activity.createdAt &&
+                        format(new Date(activity.createdAt), "HH:mm · MMM dd")}
+                    </p>
                   </div>
                 </div>
-              ))}
-            </div>
-          ) : activities.length > 0 ? (
-            <div className="space-y-4">
-              {activities.map((activity, index) => (
-                <motion.div
-                  key={activity._id || index}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                  className="flex items-start gap-4 p-3 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
-                    {getActivityIcon(activity.type)}
-                  </div>
-
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <h4 className="font-medium text-gray-800">
-                          {activity.title}
-                        </h4>
-                        {activity.description && (
-                          <p className="text-sm text-gray-600 mt-1 line-clamp-2">
-                            {activity.description}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between mt-3">
-                      <div className="flex items-center gap-2 text-xs text-gray-500">
-                        <Clock className="w-3 h-3" />
-                        {activity.createdAt &&
-                          formatTimeAgo(activity.createdAt.toString())}
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-8">
-              <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
-                <Calendar className="w-8 h-8 text-gray-400" />
-              </div>
-              <h3 className="font-medium text-gray-800 mb-2">
-                No Recent Activity
-              </h3>
-              <p className="text-sm text-gray-600">
-                Activity will appear here when team members submit updates
+              ))
+            ) : (
+              <p className="text-center py-10 text-muted-foreground">
+                No recent pulse activity.
               </p>
-            </div>
-          )}
-
-          {activities.length > 0 && (
-            <div className="mt-6 pt-4 border-t">
-              <Button variant="outline" className="w-full">
-                View All Activity
-              </Button>
-            </div>
-          )}
-        </div>
-      </motion.div>
+            )}
+          </div>
+        </motion.div>
+      </div>
     </div>
   );
 }
