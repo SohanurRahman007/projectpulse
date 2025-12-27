@@ -57,7 +57,6 @@ export function AdminSidebar() {
     window.location.href = "/login";
   };
 
-  // একটি কমন মেনু রেন্ডারার ফাংশন যা মোবাইল ও ডেস্কটপ দুই জায়গাতেই টেক্সট দেখাবে
   const renderMenuItems = (items: typeof menuItems) => (
     <div className="space-y-1 px-2">
       {items.map((item) => {
