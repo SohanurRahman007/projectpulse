@@ -85,16 +85,10 @@ export default function Navbar() {
               Home
             </Link>
             <Link
-              href="#features"
+              href="/features"
               className="text-muted-foreground hover:text-foreground font-medium"
             >
               Features
-            </Link>
-            <Link
-              href="#demo"
-              className="text-muted-foreground hover:text-foreground font-medium"
-            >
-              Demo
             </Link>
           </div>
 

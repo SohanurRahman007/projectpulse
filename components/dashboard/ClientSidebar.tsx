@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, LogOut, Target } from "lucide-react";
+import { BarChart, LayoutDashboard, LogOut, Target } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
@@ -21,12 +21,14 @@ export function ClientSidebar({
     <div className="flex flex-col h-full bg-white dark:bg-zinc-950">
       <div className="p-8">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-destructive rounded flex items-center justify-center">
-            <Target className="text-white w-5 h-5" />
-          </div>
-          <span className="text-2xl font-black tracking-tighter uppercase">
-            PULSE
-          </span>
+          <Link href="/" className="flex items-center gap-3">
+            <div className="bg-destructive p-1.5 rounded-lg">
+              <BarChart className="h-6 w-6 text-white" />
+            </div>
+            <span className="font-black tracking-tighter text-2xl italic">
+              PULSE
+            </span>
+          </Link>
         </div>
       </div>
 
