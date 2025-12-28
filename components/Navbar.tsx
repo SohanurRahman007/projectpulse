@@ -2,18 +2,20 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-// import { ThemeToggle } from "@/components/theme-toggle";
-import { User } from "@/types"; // Import User type
+import { User } from "@/types";
 import { ThemeToggle } from "./theme-toggle";
+import { Menu, X, LayoutDashboard, LogOut, Home, Zap } from "lucide-react"; // আইকন যোগ করা হয়েছে
 
 export default function Navbar() {
-  const [user, setUser] = useState<User | null>(null); // Use User type instead of any
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const pathname = usePathname();
 
   useEffect(() => {
-    // setTimeout ব্যবহার করবো error avoid করার জন্য
     const timer = setTimeout(() => {
       const userData = localStorage.getItem("user");
       if (userData) {
@@ -26,35 +28,56 @@ export default function Navbar() {
       }
       setLoading(false);
     }, 0);
-
-    // Cleanup function
     return () => clearTimeout(timer);
   }, []);
+
+  // মোবাইল মেনু বন্ধ করার জন্য
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [pathname]);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
-
-    toast.success("Logged out successfully", {
-      description: "You have been logged out.",
-    });
-
+    toast.success("Logged out successfully");
     setTimeout(() => {
       window.location.href = "/";
     }, 1500);
   };
 
+  const isActive = (path: string) => pathname === path;
+
+  const NavLinks = () => (
+    <>
+      <Link
+        href="/"
+        className={`text-sm font-black uppercase tracking-widest transition-all duration-200 flex items-center gap-2 ${
+          isActive("/")
+            ? "text-destructive"
+            : "text-muted-foreground hover:text-foreground"
+        }`}
+      >
+        <Home className="w-4 h-4 md:hidden" /> Home
+      </Link>
+      <Link
+        href="/features"
+        className={`text-sm font-black uppercase tracking-widest transition-all duration-200 flex items-center gap-2 ${
+          isActive("/features")
+            ? "text-destructive"
+            : "text-muted-foreground hover:text-foreground"
+        }`}
+      >
+        <Zap className="w-4 h-4 md:hidden" /> Features
+      </Link>
+    </>
+  );
+
   if (loading) {
     return (
-      <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container mx-auto px-4 py-3">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center space-x-2">
-              <div className="w-10 h-10 bg-primary rounded-lg animate-pulse"></div>
-              <div className="h-8 w-32 bg-muted rounded animate-pulse"></div>
-            </div>
-            <div className="h-10 w-24 bg-muted rounded animate-pulse"></div>
-          </div>
+      <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur">
+        <div className="container mx-auto px-4 py-3 flex justify-between items-center">
+          <div className="w-32 h-8 bg-muted animate-pulse rounded"></div>
+          <div className="w-10 h-10 bg-muted animate-pulse rounded-full"></div>
         </div>
       </nav>
     );
@@ -65,71 +88,128 @@ export default function Navbar() {
       <div className="container mx-auto px-4 py-3">
         <div className="flex justify-between items-center">
           {/* Logo */}
-          <Link href="/" className="flex items-center space-x-2">
-            <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
+          <Link href="/" className="flex items-center space-x-2 group">
+            <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center group-hover:bg-destructive transition-colors">
               <span className="text-primary-foreground font-bold text-xl">
                 PP
               </span>
             </div>
-            <span className="text-2xl font-bold text-foreground hidden md:block">
-              ProjectPulse
+            <span className="text-2xl font-black tracking-tighter text-foreground hidden sm:block uppercase italic">
+              Project<span className="text-destructive">Pulse</span>
             </span>
           </Link>
 
-          {/* Navigation Links */}
+          {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
-            <Link
-              href="/"
-              className="text-muted-foreground hover:text-foreground font-medium"
-            >
-              Home
-            </Link>
-            <Link
-              href="/features"
-              className="text-muted-foreground hover:text-foreground font-medium"
-            >
-              Features
-            </Link>
+            <NavLinks />
           </div>
 
-          {/* Right Side */}
-          <div className="flex items-center space-x-3">
+          {/* Right Side Tools */}
+          <div className="flex items-center space-x-2">
             <ThemeToggle />
 
-            {user ? (
-              <>
-                <span className="text-muted-foreground">
-                  Welcome, <span className="font-semibold">{user.name}</span>
-                </span>
-                <Button
-                  onClick={() => {
-                    if (user.role === "admin") {
-                      window.location.href = "/admin-dashboard";
-                    } else if (user.role === "employee") {
-                      window.location.href = "/employee-dashboard";
-                    } else {
-                      window.location.href = "/client-dashboard";
-                    }
-                  }}
-                >
-                  Dashboard
-                </Button>
-                <Button
-                  onClick={handleLogout}
-                  variant="outline"
-                  className="border-destructive text-destructive hover:bg-destructive/10"
-                >
-                  Logout
-                </Button>
-              </>
-            ) : (
-              <Link href="/login">
-                <Button>Login / Demo</Button>
-              </Link>
-            )}
+            {/* Desktop User Actions */}
+            <div className="hidden md:flex items-center space-x-3">
+              {user ? (
+                <>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="font-black uppercase text-[10px] tracking-widest"
+                    onClick={() => {
+                      const routes: any = {
+                        admin: "/admin-dashboard",
+                        employee: "/employee-dashboard",
+                        client: "/client-dashboard",
+                      };
+                      window.location.href = routes[user.role] || "/";
+                    }}
+                  >
+                    Dashboard
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={handleLogout}
+                    className="bg-destructive hover:bg-destructive/90 text-white font-black uppercase text-[10px] tracking-widest h-9 px-4"
+                  >
+                    Logout
+                  </Button>
+                </>
+              ) : (
+                <Link href="/login">
+                  <Button className="font-black uppercase text-[10px] tracking-widest h-9 px-6">
+                    Login
+                  </Button>
+                </Link>
+              )}
+            </div>
+
+            {/* Mobile Menu Toggle */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="md:hidden border-2 border-zinc-100 dark:border-zinc-800"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            >
+              {isMobileMenuOpen ? (
+                <X className="w-6 h-6" />
+              ) : (
+                <Menu className="w-6 h-6" />
+              )}
+            </Button>
           </div>
         </div>
       </div>
+
+      {/* Mobile Sidebar Menu */}
+      {isMobileMenuOpen && (
+        <div className="md:hidden absolute top-[65px] left-0 w-full bg-background border-b shadow-xl animate-in slide-in-from-top duration-300">
+          <div className="flex flex-col p-6 space-y-6">
+            <div className="flex flex-col space-y-4 border-b pb-6">
+              <NavLinks />
+            </div>
+
+            <div className="flex flex-col gap-3">
+              {user ? (
+                <>
+                  <div className="px-2 py-1">
+                    <p className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">
+                      Logged in as
+                    </p>
+                    <p className="font-bold text-destructive">{user.name}</p>
+                  </div>
+                  <Button
+                    className="w-full justify-start font-black uppercase text-xs tracking-widest h-12"
+                    onClick={() => {
+                      const routes: any = {
+                        admin: "/admin-dashboard",
+                        employee: "/employee-dashboard",
+                        client: "/client-dashboard",
+                      };
+                      window.location.href = routes[user.role] || "/";
+                    }}
+                  >
+                    <LayoutDashboard className="w-4 h-4 mr-3" /> Dashboard
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start font-black uppercase text-xs tracking-widest h-12 border-2 border-destructive text-destructive hover:bg-destructive/10"
+                    onClick={handleLogout}
+                  >
+                    <LogOut className="w-4 h-4 mr-3" /> Logout
+                  </Button>
+                </>
+              ) : (
+                <Link href="/login" className="w-full">
+                  <Button className="w-full font-black uppercase text-xs tracking-widest h-12">
+                    Login / Demo Access
+                  </Button>
+                </Link>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </nav>
   );
 }
