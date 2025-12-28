@@ -91,7 +91,9 @@ export function AdminSidebar() {
           <div className="bg-destructive p-1.5 rounded">
             <BarChart className="h-5 w-5 text-white" />
           </div>
-          <span className="font-black tracking-tighter text-xl">PULSE</span>
+          <Link href={"/"}>
+            <span className="font-black tracking-tighter text-xl">PULSE</span>
+          </Link>
         </div>
       </div>
 

@@ -29,7 +29,7 @@ export function EmployeeSidebar() {
     >
       {/* Brand Logo Section */}
       <div className="p-8 mb-2">
-        <Link href="/employee/dashboard" className="flex items-center gap-3">
+        <Link href="/" className="flex items-center gap-3">
           <div className="bg-destructive p-1.5 rounded-lg">
             <BarChart className="h-6 w-6 text-white" />
           </div>
